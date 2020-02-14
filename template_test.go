@@ -3,12 +3,31 @@ package templatex
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestDefaultReadFunc(t *testing.T) {
+	// setup
+	pathname := "example.txt"
+	f, err := os.OpenFile(pathname, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	assert.NoError(t, err)
+	defer func() {
+		f.Close()
+		os.Remove(pathname)
+	}()
+	_, err = f.WriteAt([]byte("hello world!"), 0)
+	assert.NoError(t, err)
+
+	// test that DefaultReadFunc read file contents
+	b, err := DefaultReadFunc(pathname)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello world!"), b)
+}
 
 func TestNew(t *testing.T) {
 	tpl := New()
@@ -38,8 +57,6 @@ func TestNewEx(t *testing.T) {
 
 func TestTemplate_RenderHTML(t *testing.T) {
 	// setup
-	// layf, err := testutil.Mkfile("@layout.html")
-
 	rootdir := "/root/dir/"
 	files := map[string]string{}
 	readfn := func(pathname string) ([]byte, error) {
@@ -57,7 +74,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	tpl := NewEx(readfn, DefaultFuncMap())
 
 	// test that return syscall.ENOENT error
-	err := tpl.RenderText(b, "index.html", map[string]interface{}{
+	err := tpl.RenderHTML(b, "index.html", map[string]interface{}{
 		"World": "world!",
 	})
 	assert.Equal(t, syscall.ENOENT, err)
@@ -65,9 +82,9 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	// test that render the file formatted as html/template
 	files["/root/dir/index.html"] = `hello {{.World}}`
 	assert.NoError(t, tpl.RenderHTML(b, "/index.html", map[string]interface{}{
-		"World": "world!",
+		"World": "<world!>",
 	}))
-	assert.Equal(t, []byte("hello world!"), b.Bytes())
+	assert.Equal(t, []byte("hello &lt;world!&gt;"), b.Bytes())
 
 	// test that uses "index.html" as filename if pathname ended with slash
 	b.Reset()
@@ -94,6 +111,16 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Regexp(t, `\s*hello world\s+with sub template!\s*`, string(b.Bytes()))
+
+	// that returns error if the template is included recursively
+	b.Reset()
+	files["/root/dir/with_include_recursively.html"] = `hello {{.World}} {{template "@include_recursively.html" .}}`
+	files["/root/dir/include_recursively.html"] = `{{define "@include_recursively.html"}} {{template "@include_recursively.html" .}} {{end}}`
+	err = tpl.RenderHTML(b, "with_include_recursively.html", map[string]interface{}{
+		"World": "world",
+	})
+	assert.Error(t, err)
+	assert.Regexp(t, `cannot parse "include_recursively.html" recursively`, err)
 
 	// test that insert sub template error as html comments
 	b.Reset()
@@ -157,4 +184,100 @@ func TestTemplate_RenderHTML(t *testing.T) {
 		"World": "world!",
 	})
 	assert.Regexp(t, `could not parse action {{layout "@invalid_layout.html"}} of "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
+}
+
+func TestTemplate_RenderText(t *testing.T) {
+	// setup
+	rootdir := "/root/dir/"
+	files := map[string]string{}
+	readfn := func(pathname string) ([]byte, error) {
+		if pathname == "/" {
+			pathname = "/index.html"
+		}
+
+		if s, ok := files[filepath.Join(rootdir, pathname)]; ok {
+			return []byte(s), nil
+		}
+
+		return nil, syscall.ENOENT
+	}
+	b := bytes.NewBuffer(nil)
+	tpl := NewEx(readfn, DefaultFuncMap())
+
+	// test that render the file formatted as text/template
+	files["/root/dir/with_include.html"] = `hello {{.World}} {{template "@include.html" .}}`
+	files["/root/dir/include.html"] = `{{define "@include.html"}}with {{.SubMessage}}{{end}}`
+	assert.NoError(t, tpl.RenderText(b, "with_include.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	}))
+	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
+}
+
+func TestTemplate_RemoveCacheText(t *testing.T) {
+	// setup
+	rootdir := "/root/dir/"
+	files := map[string]string{}
+	readfn := func(pathname string) ([]byte, error) {
+		if pathname == "/" {
+			pathname = "/index.html"
+		}
+
+		if s, ok := files[filepath.Join(rootdir, pathname)]; ok {
+			return []byte(s), nil
+		}
+
+		return nil, syscall.ENOENT
+	}
+	b := bytes.NewBuffer(nil)
+	tpl := NewEx(readfn, DefaultFuncMap())
+
+	// test that returns false if the cache does not removed
+	assert.False(t, tpl.RemoveCacheText("/index.html"))
+
+	// rendered template is to be cached
+	files["/root/dir/index.html"] = `hello {{.World}}`
+	assert.NoError(t, tpl.RenderText(b, "/index.html", map[string]interface{}{
+		"World": "<world!>",
+	}))
+
+	// test that returns false if the cache does not remove
+	assert.False(t, tpl.RemoveCacheHTML("/index.html"))
+
+	// test that returns true if the cache has been removed
+	assert.True(t, tpl.RemoveCacheText("/index.html"))
+}
+
+func TestTemplate_RemoveCacheHTML(t *testing.T) {
+	// setup
+	rootdir := "/root/dir/"
+	files := map[string]string{}
+	readfn := func(pathname string) ([]byte, error) {
+		if pathname == "/" {
+			pathname = "/index.html"
+		}
+
+		if s, ok := files[filepath.Join(rootdir, pathname)]; ok {
+			return []byte(s), nil
+		}
+
+		return nil, syscall.ENOENT
+	}
+	b := bytes.NewBuffer(nil)
+	tpl := NewEx(readfn, DefaultFuncMap())
+
+	// test that returns false if the cache does not removed
+	assert.False(t, tpl.RemoveCacheHTML("/index.html"))
+
+	// rendered template is to be cached
+	files["/root/dir/index.html"] = `hello {{.World}}`
+	assert.NoError(t, tpl.RenderHTML(b, "/index.html", map[string]interface{}{
+		"World": "&lt;world!&gt;",
+	}))
+
+	// test that returns false if the cache does not remove
+	assert.False(t, tpl.RemoveCacheText("/index.html"))
+
+	// test that returns true if the cache has been removed
+	assert.True(t, tpl.RemoveCacheHTML("/index.html"))
 }
