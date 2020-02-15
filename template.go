@@ -91,7 +91,7 @@ func attach(tmpl interface{}, name string, val interface{}) error {
 
 // match　{{(template|layout) "name" .}}
 var reTemplateAction = regexp.MustCompile(
-	`[^{]*\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2}`,
+	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
 func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interface{}, error) {
@@ -120,16 +120,18 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 
 	// lookup associated templates
 	var hasLayout bool
+	var layout interface{}
+	var includes = make(map[string]interface{})
 	var cur int
 	m := reTemplateAction.FindSubmatchIndex(buf)
 	for m != nil {
 		// manipulate index
-		m[0], m[1], m[2], m[3], m[4], m[5] = m[0]+cur, m[1]+cur, m[2]+cur, m[3]+cur, m[4]+cur, m[5]+cur
+		m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7] = m[0]+cur, m[1]+cur, m[2]+cur, m[3]+cur, m[4]+cur, m[5]+cur, m[6]+cur, m[7]+cur
 		// update cursor
 		cur = m[1]
 		// extract action "value" pair
-		act := string(buf[m[2]:m[3]])
-		val := filepath.Clean(string(buf[m[4]:m[5]]))
+		act := string(buf[m[4]:m[5]])
+		val := filepath.Clean(string(buf[m[6]:m[7]]))
 
 		// load layout template
 		isLayout := act == "layout"
@@ -140,10 +142,9 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 			}
 			hasLayout = true
 			// remove 'layout' action
-			buf = append(buf[:m[0]], buf[m[1]:]...)
+			buf = append(buf[:m[2]], buf[m[3]:]...)
 			// update cursor and index
 			cur = m[0]
-			m[1] = m[0]
 		}
 
 		// parse associated template
@@ -160,15 +161,24 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 			}
 		}
 
-		// swap template to layout template
 		if isLayout {
-			tmpl = vtmpl
-		} else if err = attach(tmpl, val, vtmpl); err != nil {
-			// attach associated template
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", val, pathname, err)
+			layout = vtmpl
+		} else {
+			includes[val] = vtmpl
 		}
 
 		m = reTemplateAction.FindSubmatchIndex(buf[cur:])
+	}
+
+	// use layout template as the base template
+	if hasLayout {
+		tmpl = layout
+	}
+	// attach associated templates
+	for name, t := range includes {
+		if err = attach(tmpl, name, t); err != nil {
+			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
+		}
 	}
 
 	switch v := tmpl.(type) {
