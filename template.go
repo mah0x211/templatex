@@ -121,20 +121,10 @@ func (t *Template) RenderHTML(w io.Writer, pathname string, data map[string]inte
 	return t.html.Render(w, filepath.Clean(pathname), data)
 }
 
-func (t *Template) RemoveCacheText(pathname string) bool {
-	pathname = filepath.Clean(pathname)
-	if _, ok := t.text.GetCache(pathname); ok {
-		t.text.RemoveCache(pathname)
-		return true
-	}
-	return false
+func (t *Template) RemoveCacheText(pathname string) {
+	t.text.RemoveCache(filepath.Clean(pathname))
 }
 
-func (t *Template) RemoveCacheHTML(pathname string) bool {
-	pathname = filepath.Clean(pathname)
-	if _, ok := t.html.GetCache(pathname); ok {
-		t.html.RemoveCache(pathname)
-		return true
-	}
-	return false
+func (t *Template) RemoveCacheHTML(pathname string) {
+	t.html.RemoveCache(filepath.Clean(pathname))
 }

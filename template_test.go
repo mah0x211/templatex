@@ -294,9 +294,6 @@ func TestTemplate_RemoveCacheText(t *testing.T) {
 	b := bytes.NewBuffer(nil)
 	tpl := NewEx(readfn, DefaultFuncMap())
 
-	// test that returns false if the cache does not removed
-	assert.False(t, tpl.RemoveCacheText("/index.html"))
-
 	// rendered template is to be cached
 	files["/root/dir/index.html"] = `hello {{.World}}`
 	assert.NoError(t, tpl.RenderText(b, "/index.html", map[string]interface{}{
@@ -329,9 +326,6 @@ func TestTemplate_RemoveCacheHTML(t *testing.T) {
 	}
 	b := bytes.NewBuffer(nil)
 	tpl := NewEx(readfn, DefaultFuncMap())
-
-	// test that returns false if the cache does not removed
-	assert.False(t, tpl.RemoveCacheHTML("/index.html"))
 
 	// rendered template is to be cached
 	files["/root/dir/index.html"] = `hello {{.World}}`
