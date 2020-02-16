@@ -71,10 +71,10 @@ func TestTemplate_RenderHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap())
+	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
 
 	// test that return syscall.ENOENT error
-	err := tpl.RenderHTML(b, "index.html", map[string]interface{}{
+	err := create().RenderHTML(b, "index.html", map[string]interface{}{
 		"World": "world!",
 	})
 	assert.Equal(t, syscall.ENOENT, err)
@@ -83,7 +83,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	files = map[string]string{
 		"/root/dir/index.html": `hello {{.World}}`,
 	}
-	assert.NoError(t, tpl.RenderHTML(b, "/index.html", map[string]interface{}{
+	assert.NoError(t, create().RenderHTML(b, "/index.html", map[string]interface{}{
 		"World": "<world!>",
 	}))
 	assert.Equal(t, []byte("hello &lt;world!&gt;"), b.Bytes())
@@ -92,7 +92,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	files = map[string]string{
 		"/root/dir/invalid.html": `hello {{.World}`,
 	}
-	err = tpl.RenderHTML(b, "invalid.html", map[string]interface{}{
+	err = create().RenderHTML(b, "invalid.html", map[string]interface{}{
 		"World": "world!",
 	})
 	assert.Error(t, err)
@@ -111,7 +111,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{end}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_include.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_include.html", map[string]interface{}{
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
@@ -137,7 +137,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{end}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_include_nested.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_include_nested.html", map[string]interface{}{
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
@@ -156,7 +156,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{end}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_include_recursively.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_include_recursively.html", map[string]interface{}{
 		"World": "world",
 	})
 	assert.Error(t, err)
@@ -170,7 +170,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 		`,
 		"/root/dir/invalid.html": `hello {{.World}`,
 	}
-	err = tpl.RenderHTML(b, "with_invalid.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_invalid.html", map[string]interface{}{
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
@@ -185,6 +185,11 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{template "content" .}}
 			----------------------
 		`,
+		"/root/dir/include.html": `
+			{{define "@include.html"}}
+			with {{.SubMessage}}
+			{{end}}
+		`,
 		"/root/dir/with_layout.html": `
 			{{define "content"}}
 			hello {{.World}} {{template "@include.html" .}}
@@ -192,7 +197,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{layout "@layout.html"}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_layout.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_layout.html", map[string]interface{}{
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
@@ -216,7 +221,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{layout "@layout2.html"}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_two_layout.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_two_layout.html", map[string]interface{}{
 		"World": "world!",
 	})
 	assert.Regexp(t, `'layout' action cannot be performed twice`, err)
@@ -237,7 +242,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 			{{layout "@invalid_layout.html"}}
 		`,
 	}
-	err = tpl.RenderHTML(b, "with_invalid_layout.html", map[string]interface{}{
+	err = create().RenderHTML(b, "with_invalid_layout.html", map[string]interface{}{
 		"World": "world!",
 	})
 	assert.Regexp(t, `could not parse action {{layout "@invalid_layout.html"}} of "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
@@ -259,12 +264,12 @@ func TestTemplate_RenderText(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap())
+	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
 
 	// test that render the file formatted as text/template
 	files["/root/dir/with_include.html"] = `hello {{.World}} {{template "@include.html" .}}`
 	files["/root/dir/include.html"] = `{{define "@include.html"}}with {{.SubMessage}}{{end}}`
-	assert.NoError(t, tpl.RenderText(b, "with_include.html", map[string]interface{}{
+	assert.NoError(t, create().RenderText(b, "with_include.html", map[string]interface{}{
 		"World":      "<world!>",
 		"SubMessage": "sub template!",
 	}))
@@ -298,11 +303,13 @@ func TestTemplate_RemoveCacheText(t *testing.T) {
 		"World": "<world!>",
 	}))
 
-	// test that returns false if the cache does not remove
-	assert.False(t, tpl.RemoveCacheHTML("/index.html"))
+	_, ok := tpl.text.GetCache("/index.html")
+	assert.True(t, ok)
 
-	// test that returns true if the cache has been removed
-	assert.True(t, tpl.RemoveCacheText("/index.html"))
+	// test that remove cached template
+	tpl.RemoveCacheText("/index.html")
+	_, ok = tpl.text.GetCache("/index.html")
+	assert.False(t, ok)
 }
 
 func TestTemplate_RemoveCacheHTML(t *testing.T) {
@@ -332,9 +339,11 @@ func TestTemplate_RemoveCacheHTML(t *testing.T) {
 		"World": "&lt;world!&gt;",
 	}))
 
-	// test that returns false if the cache does not remove
-	assert.False(t, tpl.RemoveCacheText("/index.html"))
+	_, ok := tpl.html.GetCache("/index.html")
+	assert.True(t, ok)
 
-	// test that returns true if the cache has been removed
-	assert.True(t, tpl.RemoveCacheHTML("/index.html"))
+	// test that remove cached template
+	tpl.RemoveCacheHTML("/index.html")
+	_, ok = tpl.html.GetCache("/index.html")
+	assert.False(t, ok)
 }

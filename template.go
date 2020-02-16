@@ -2,12 +2,10 @@ package templatex
 
 import (
 	"fmt"
-	template_html "html/template"
 	"io"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
-	template_text "text/template"
 )
 
 type ReadFunc func(pathname string) ([]byte, error)
@@ -16,77 +14,32 @@ func DefaultReadFunc(pathname string) ([]byte, error) {
 	return ioutil.ReadFile(pathname)
 }
 
+type xRenderer interface {
+	Render(w io.Writer, pathname string, data map[string]interface{}) error
+	Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error)
+	GetCache(key string) (interface{}, bool)
+	RemoveCache(key string)
+}
+
 type Template struct {
 	readfn ReadFunc
 	funcs  map[string]interface{}
-	cache  map[string]map[string]interface{}
+	text   xRenderer
+	html   xRenderer
 }
 
 func NewEx(readfn ReadFunc, funcs map[string]interface{}) *Template {
-	return &Template{
+	t := &Template{
 		readfn: readfn,
 		funcs:  funcs,
-		cache:  make(map[string]map[string]interface{}),
 	}
+	t.text = NewText(t)
+	t.html = NewHTML(t)
+	return t
 }
 
 func New() *Template {
 	return NewEx(DefaultReadFunc, DefaultFuncMap())
-}
-
-func (t *Template) setCache(v interface{}, pathname, asa string) {
-	cache, ok := t.cache[asa]
-	if !ok {
-		cache = make(map[string]interface{})
-		t.cache[asa] = cache
-	}
-	cache[pathname] = v
-}
-
-func (t *Template) unsetCache(pathname, asa string) bool {
-	if cache, ok := t.cache[asa]; ok {
-		if _, ok := cache[pathname]; ok {
-			delete(cache, pathname)
-			return true
-		}
-	}
-	return false
-}
-
-func (t *Template) getCache(pathname, asa string) interface{} {
-	cache, ok := t.cache[asa]
-	if !ok {
-		return nil
-	}
-	tmpl, ok := cache[pathname]
-	if !ok {
-		return nil
-	}
-
-	return tmpl
-}
-
-func attach(tmpl interface{}, name string, val interface{}) error {
-	switch v := tmpl.(type) {
-	case *template_text.Template:
-		clone, err := val.(*template_text.Template).Clone()
-		if err != nil {
-			return err
-		}
-		_, err = v.AddParseTree(name, clone.Lookup(name).Tree)
-		return err
-
-	case *template_html.Template:
-		clone, err := val.(*template_html.Template).Clone()
-		if err != nil {
-			return err
-		}
-		_, err = v.AddParseTree(name, clone.Lookup(name).Tree)
-		return err
-
-	default:
-		panic(fmt.Errorf("unknown template type %T passed", v))
-	}
 }
 
 // match　{{(template|layout) "name" .}}
@@ -94,7 +47,7 @@ var reTemplateAction = regexp.MustCompile(
 	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
-func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interface{}, error) {
+func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]struct{}) (interface{}, error) {
 	// refuse recursive parsing
 	if _, exists := cref[pathname]; exists {
 		return nil, fmt.Errorf("cannot parse %q recursively", pathname)
@@ -105,17 +58,6 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 	buf, err := t.readfn(pathname)
 	if err != nil {
 		return nil, err
-	}
-
-	// create template
-	var tmpl interface{}
-	switch asa {
-	case "text":
-		tmpl = template_text.New(pathname).Funcs(t.funcs)
-	case "html":
-		tmpl = template_html.New(pathname).Funcs(t.funcs)
-	default:
-		panic(fmt.Errorf("unknown template type %q passed", asa))
 	}
 
 	// lookup associated templates
@@ -148,16 +90,13 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 		}
 
 		// parse associated template
-		vtmpl := t.getCache(val, asa)
-		if vtmpl == (interface{})(nil) {
-			if vtmpl, err = t.parse(val[1:], asa, cref); err != nil {
+		vtmpl, exists := r.GetCache(val)
+		if !exists {
+			if vtmpl, err = t.preprocess(r, val[1:], cref); err != nil {
 				if isLayout {
 					return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
 				}
 				return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
-			} else if !isLayout {
-				// add non-layout template into cache
-				t.setCache(vtmpl, val, asa)
 			}
 		}
 
@@ -170,66 +109,32 @@ func (t *Template) parse(pathname, asa string, cref map[string]struct{}) (interf
 		m = reTemplateAction.FindSubmatchIndex(buf[cur:])
 	}
 
-	// use layout template as the base template
-	if hasLayout {
-		tmpl = layout
-	}
-	// attach associated templates
-	for name, t := range includes {
-		if err = attach(tmpl, name, t); err != nil {
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
-		}
-	}
-
-	switch v := tmpl.(type) {
-	case *template_text.Template:
-		return v.Parse(string(buf))
-
-	case *template_html.Template:
-		return v.Parse(string(buf))
-
-	default:
-		panic(fmt.Errorf("unknown template type %T passed", v))
-	}
-}
-
-func (t *Template) render(w io.Writer, pathname, asa string, data map[string]interface{}) error {
-	var err error
-
-	pathname = filepath.Clean(pathname)
-	v := t.getCache(pathname, asa)
-	if v == (interface{})(nil) {
-		v, err = t.parse(pathname, asa, make(map[string]struct{}))
-		if err != nil {
-			return err
-		}
-		t.setCache(v, pathname, asa)
-	}
-
-	switch tmpl := v.(type) {
-	case *template_text.Template:
-		err = tmpl.Execute(w, data)
-	case *template_html.Template:
-		err = tmpl.Execute(w, data)
-	default:
-		panic(fmt.Errorf("unknown template type %q passed", asa))
-	}
-
-	return err
+	delete(cref, pathname)
+	return r.Parse(pathname, string(buf), layout, includes)
 }
 
 func (t *Template) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.render(w, pathname, "text", data)
+	return t.text.Render(w, filepath.Clean(pathname), data)
 }
 
 func (t *Template) RenderHTML(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.render(w, pathname, "html", data)
+	return t.html.Render(w, filepath.Clean(pathname), data)
 }
 
 func (t *Template) RemoveCacheText(pathname string) bool {
-	return t.unsetCache(pathname, "text")
+	pathname = filepath.Clean(pathname)
+	if _, ok := t.text.GetCache(pathname); ok {
+		t.text.RemoveCache(pathname)
+		return true
+	}
+	return false
 }
 
 func (t *Template) RemoveCacheHTML(pathname string) bool {
-	return t.unsetCache(pathname, "html")
+	pathname = filepath.Clean(pathname)
+	if _, ok := t.html.GetCache(pathname); ok {
+		t.html.RemoveCache(pathname)
+		return true
+	}
+	return false
 }
