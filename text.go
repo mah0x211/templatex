@@ -6,55 +6,38 @@ import (
 	"text/template"
 )
 
-type Text struct {
-	*Runtime
-	cache Cache
+type Text struct{}
+
+func NewText() Text {
+	return Text{}
 }
 
-func NewText(rt *Runtime, cacheable bool) *Text {
-	return &Text{
-		Runtime: rt,
-		cache:   NewCache(cacheable),
+func (_ Text) IsNil(tmpl interface{}) bool {
+	switch v := tmpl.(type) {
+	case *template.Template:
+		return v == nil
+	case nil:
+		return true
 	}
+	panic(fmt.Errorf("%T is not compatible with *template.Template", tmpl))
 }
 
-func (t *Text) Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error) {
-	// use layout template as the base template if not nil
-	tmpl, ok := layout.(*template.Template)
-	if !ok {
-		tmpl = template.New(pathname).Funcs(t.funcs)
-	}
-	// attach associated templates
-	for name, inc := range includes {
-		clone, err := inc.(*template.Template).Clone()
-		if err == nil {
-			_, err = tmpl.AddParseTree(name, clone.Lookup(name).Tree)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
-		}
-	}
-
-	return tmpl.Parse(text)
+func (_ Text) NewTemplate(name string, funcs map[string]interface{}) interface{} {
+	return template.New(name).Funcs(funcs)
 }
 
-func (t *Text) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	tmpl, ok := t.cache.Get(pathname)
-	if !ok {
-		var err error
-		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
-		if err != nil {
-			return err
-		}
-		t.cache.Set(pathname, tmpl)
+func (_ Text) AddParseTree(dst, src interface{}, name string) error {
+	clone, err := src.(*template.Template).Clone()
+	if err == nil {
+		_, err = dst.(*template.Template).AddParseTree(name, clone.Lookup(name).Tree)
 	}
+	return err
+}
+
+func (_ Text) ParseString(tmpl interface{}, str string) (interface{}, error) {
+	return tmpl.(*template.Template).Parse(str)
+}
+
+func (_ Text) Execute(tmpl interface{}, w io.Writer, data interface{}) error {
 	return tmpl.(*template.Template).Execute(w, data)
-}
-
-func (t *Text) GetCache(pathname string) (interface{}, bool) {
-	return t.cache.Get(pathname)
-}
-
-func (t *Text) RemoveCache(pathname string) {
-	t.cache.Unset(pathname)
 }

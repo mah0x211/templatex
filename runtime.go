@@ -33,8 +33,8 @@ func NewEx(readfn ReadFunc, funcs map[string]interface{}, cacheable bool) *Runti
 		readfn: readfn,
 		funcs:  funcs,
 	}
-	rt.text = NewText(rt, cacheable)
-	rt.html = NewHTML(rt, cacheable)
+	rt.text = NewTemplate(rt, cacheable, NewText())
+	rt.html = NewTemplate(rt, cacheable, NewHTML())
 	return rt
 }
 

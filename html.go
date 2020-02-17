@@ -6,55 +6,38 @@ import (
 	"io"
 )
 
-type HTML struct {
-	*Runtime
-	cache Cache
+type HTML struct{}
+
+func NewHTML() HTML {
+	return HTML{}
 }
 
-func NewHTML(rt *Runtime, cacheable bool) *HTML {
-	return &HTML{
-		Runtime: rt,
-		cache:   NewCache(cacheable),
+func (_ HTML) IsNil(tmpl interface{}) bool {
+	switch v := tmpl.(type) {
+	case *template.Template:
+		return v == nil
+	case nil:
+		return true
 	}
+	panic(fmt.Errorf("%T is not compatible with *template.Template", tmpl))
 }
 
-func (t *HTML) Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error) {
-	// use layout template as the base template if not nil
-	tmpl, ok := layout.(*template.Template)
-	if !ok {
-		tmpl = template.New(pathname).Funcs(t.funcs)
-	}
-	// attach associated templates
-	for name, inc := range includes {
-		clone, err := inc.(*template.Template).Clone()
-		if err == nil {
-			_, err = tmpl.AddParseTree(name, clone.Lookup(name).Tree)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
-		}
-	}
-
-	return tmpl.Parse(text)
+func (_ HTML) NewTemplate(name string, funcs map[string]interface{}) interface{} {
+	return template.New(name).Funcs(funcs)
 }
 
-func (t *HTML) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	tmpl, ok := t.cache.Get(pathname)
-	if !ok {
-		var err error
-		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
-		if err != nil {
-			return err
-		}
-		t.cache.Set(pathname, tmpl)
+func (_ HTML) AddParseTree(dst, src interface{}, name string) error {
+	clone, err := src.(*template.Template).Clone()
+	if err == nil {
+		_, err = dst.(*template.Template).AddParseTree(name, clone.Lookup(name).Tree)
 	}
+	return err
+}
+
+func (_ HTML) ParseString(tmpl interface{}, str string) (interface{}, error) {
+	return tmpl.(*template.Template).Parse(str)
+}
+
+func (_ HTML) Execute(tmpl interface{}, w io.Writer, data interface{}) error {
 	return tmpl.(*template.Template).Execute(w, data)
-}
-
-func (t *HTML) GetCache(pathname string) (interface{}, bool) {
-	return t.cache.Get(pathname)
-}
-
-func (t *HTML) RemoveCache(pathname string) {
-	t.cache.Unset(pathname)
 }
