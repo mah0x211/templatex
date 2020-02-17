@@ -21,24 +21,24 @@ type xRenderer interface {
 	RemoveCache(key string)
 }
 
-type Template struct {
+type Runtime struct {
 	readfn ReadFunc
 	funcs  map[string]interface{}
 	text   xRenderer
 	html   xRenderer
 }
 
-func NewEx(readfn ReadFunc, funcs map[string]interface{}) *Template {
-	t := &Template{
+func NewEx(readfn ReadFunc, funcs map[string]interface{}) *Runtime {
+	rt := &Runtime{
 		readfn: readfn,
 		funcs:  funcs,
 	}
-	t.text = NewText(t)
-	t.html = NewHTML(t)
-	return t
+	rt.text = NewText(rt)
+	rt.html = NewHTML(rt)
+	return rt
 }
 
-func New() *Template {
+func New() *Runtime {
 	return NewEx(DefaultReadFunc, DefaultFuncMap())
 }
 
@@ -47,7 +47,7 @@ var reTemplateAction = regexp.MustCompile(
 	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
-func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]struct{}) (interface{}, error) {
+func (rt *Runtime) preprocess(r xRenderer, pathname string, cref map[string]struct{}) (interface{}, error) {
 	// refuse recursive parsing
 	if _, exists := cref[pathname]; exists {
 		return nil, fmt.Errorf("cannot parse %q recursively", pathname)
@@ -55,7 +55,7 @@ func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]stru
 	cref[pathname] = struct{}{}
 
 	// read file
-	buf, err := t.readfn(pathname)
+	buf, err := rt.readfn(pathname)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]stru
 		// parse associated template
 		vtmpl, exists := r.GetCache(val)
 		if !exists {
-			if vtmpl, err = t.preprocess(r, val[1:], cref); err != nil {
+			if vtmpl, err = rt.preprocess(r, val[1:], cref); err != nil {
 				if isLayout {
 					return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
 				}
@@ -113,18 +113,18 @@ func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]stru
 	return r.Parse(pathname, string(buf), layout, includes)
 }
 
-func (t *Template) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.text.Render(w, filepath.Clean(pathname), data)
+func (rt *Runtime) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
+	return rt.text.Render(w, filepath.Clean(pathname), data)
 }
 
-func (t *Template) RenderHTML(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.html.Render(w, filepath.Clean(pathname), data)
+func (rt *Runtime) RenderHTML(w io.Writer, pathname string, data map[string]interface{}) error {
+	return rt.html.Render(w, filepath.Clean(pathname), data)
 }
 
-func (t *Template) RemoveCacheText(pathname string) {
-	t.text.RemoveCache(filepath.Clean(pathname))
+func (rt *Runtime) RemoveCacheText(pathname string) {
+	rt.text.RemoveCache(filepath.Clean(pathname))
 }
 
-func (t *Template) RemoveCacheHTML(pathname string) {
-	t.html.RemoveCache(filepath.Clean(pathname))
+func (rt *Runtime) RemoveCacheHTML(pathname string) {
+	rt.html.RemoveCache(filepath.Clean(pathname))
 }

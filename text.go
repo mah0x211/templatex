@@ -9,14 +9,14 @@ import (
 
 type Text struct {
 	sync.Mutex
-	*Template
+	*Runtime
 	cache map[string]*template.Template
 }
 
-func NewText(t *Template) *Text {
+func NewText(rt *Runtime) *Text {
 	return &Text{
-		Template: t,
-		cache:    make(map[string]*template.Template),
+		Runtime: rt,
+		cache:   make(map[string]*template.Template),
 	}
 }
 

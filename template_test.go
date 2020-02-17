@@ -71,7 +71,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
+	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap()) }
 
 	// test that return syscall.ENOENT error
 	err := create().RenderHTML(b, "index.html", map[string]interface{}{
@@ -264,7 +264,7 @@ func TestTemplate_RenderText(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
+	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap()) }
 
 	// test that render the file formatted as text/template
 	files["/root/dir/with_include.html"] = `hello {{.World}} {{template "@include.html" .}}`
