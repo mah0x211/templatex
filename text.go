@@ -3,20 +3,18 @@ package templatex
 import (
 	"fmt"
 	"io"
-	"sync"
 	"text/template"
 )
 
 type Text struct {
-	sync.Mutex
 	*Runtime
-	cache map[string]*template.Template
+	cache Cache
 }
 
-func NewText(rt *Runtime) *Text {
+func NewText(rt *Runtime, cacheable bool) *Text {
 	return &Text{
 		Runtime: rt,
-		cache:   make(map[string]*template.Template),
+		cache:   NewCache(cacheable),
 	}
 }
 
@@ -41,31 +39,22 @@ func (t *Text) Parse(pathname, text string, layout interface{}, includes map[str
 }
 
 func (t *Text) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	t.Lock()
-	tmpl := t.cache[pathname]
-	t.Unlock()
-	if tmpl == nil {
-		v, err := t.preprocess(t, pathname, make(map[string]struct{}))
+	tmpl, ok := t.cache.Get(pathname)
+	if !ok {
+		var err error
+		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
 		if err != nil {
 			return err
 		}
-		tmpl = v.(*template.Template)
-		t.Lock()
-		t.cache[pathname] = tmpl
-		t.Unlock()
+		t.cache.Set(pathname, tmpl)
 	}
-	return tmpl.Execute(w, data)
+	return tmpl.(*template.Template).Execute(w, data)
 }
 
 func (t *Text) GetCache(pathname string) (interface{}, bool) {
-	t.Lock()
-	v, ok := t.cache[pathname]
-	t.Unlock()
-	return v, ok
+	return t.cache.Get(pathname)
 }
 
 func (t *Text) RemoveCache(pathname string) {
-	t.Lock()
-	delete(t.cache, pathname)
-	t.Unlock()
+	t.cache.Unset(pathname)
 }

@@ -28,18 +28,18 @@ type Runtime struct {
 	html   xRenderer
 }
 
-func NewEx(readfn ReadFunc, funcs map[string]interface{}) *Runtime {
+func NewEx(readfn ReadFunc, funcs map[string]interface{}, cacheable bool) *Runtime {
 	rt := &Runtime{
 		readfn: readfn,
 		funcs:  funcs,
 	}
-	rt.text = NewText(rt)
-	rt.html = NewHTML(rt)
+	rt.text = NewText(rt, cacheable)
+	rt.html = NewHTML(rt, cacheable)
 	return rt
 }
 
 func New() *Runtime {
-	return NewEx(DefaultReadFunc, DefaultFuncMap())
+	return NewEx(DefaultReadFunc, DefaultFuncMap(), true)
 }
 
 // match　{{(template|layout) "name" .}}

@@ -4,19 +4,17 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"sync"
 )
 
 type HTML struct {
-	sync.Mutex
 	*Runtime
-	cache map[string]*template.Template
+	cache Cache
 }
 
-func NewHTML(rt *Runtime) *HTML {
+func NewHTML(rt *Runtime, cacheable bool) *HTML {
 	return &HTML{
 		Runtime: rt,
-		cache:   make(map[string]*template.Template),
+		cache:   NewCache(cacheable),
 	}
 }
 
@@ -41,31 +39,22 @@ func (t *HTML) Parse(pathname, text string, layout interface{}, includes map[str
 }
 
 func (t *HTML) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	t.Lock()
-	tmpl := t.cache[pathname]
-	t.Unlock()
-	if tmpl == nil {
-		v, err := t.preprocess(t, pathname, make(map[string]struct{}))
+	tmpl, ok := t.cache.Get(pathname)
+	if !ok {
+		var err error
+		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
 		if err != nil {
 			return err
 		}
-		tmpl = v.(*template.Template)
-		t.Lock()
-		t.cache[pathname] = tmpl
-		t.Unlock()
+		t.cache.Set(pathname, tmpl)
 	}
-	return tmpl.Execute(w, data)
+	return tmpl.(*template.Template).Execute(w, data)
 }
 
 func (t *HTML) GetCache(pathname string) (interface{}, bool) {
-	t.Lock()
-	v, ok := t.cache[pathname]
-	t.Unlock()
-	return v, ok
+	return t.cache.Get(pathname)
 }
 
 func (t *HTML) RemoveCache(pathname string) {
-	t.Lock()
-	delete(t.cache, pathname)
-	t.Unlock()
+	t.cache.Unset(pathname)
 }
