@@ -14,7 +14,7 @@ func DefaultReadFunc(pathname string) ([]byte, error) {
 	return ioutil.ReadFile(pathname)
 }
 
-type xRenderer interface {
+type xTemplate interface {
 	Render(w io.Writer, pathname string, data map[string]interface{}) error
 	Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error)
 	GetCache(key string) (interface{}, bool)
@@ -24,8 +24,8 @@ type xRenderer interface {
 type Runtime struct {
 	readfn ReadFunc
 	funcs  map[string]interface{}
-	text   xRenderer
-	html   xRenderer
+	text   xTemplate
+	html   xTemplate
 }
 
 func NewEx(readfn ReadFunc, funcs map[string]interface{}, cacheable bool) *Runtime {
@@ -47,7 +47,7 @@ var reTemplateAction = regexp.MustCompile(
 	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
-func (rt *Runtime) preprocess(r xRenderer, pathname string, cref map[string]struct{}) (interface{}, error) {
+func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]struct{}) (interface{}, error) {
 	// refuse recursive parsing
 	if _, exists := cref[pathname]; exists {
 		return nil, fmt.Errorf("cannot parse %q recursively", pathname)
@@ -90,9 +90,9 @@ func (rt *Runtime) preprocess(r xRenderer, pathname string, cref map[string]stru
 		}
 
 		// parse associated template
-		vtmpl, exists := r.GetCache(val)
+		vtmpl, exists := t.GetCache(val)
 		if !exists {
-			if vtmpl, err = rt.preprocess(r, val[1:], cref); err != nil {
+			if vtmpl, err = rt.preprocess(t, val[1:], cref); err != nil {
 				if isLayout {
 					return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
 				}
@@ -110,7 +110,7 @@ func (rt *Runtime) preprocess(r xRenderer, pathname string, cref map[string]stru
 	}
 
 	delete(cref, pathname)
-	return r.Parse(pathname, string(buf), layout, includes)
+	return t.Parse(pathname, string(buf), layout, includes)
 }
 
 func (rt *Runtime) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
