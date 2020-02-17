@@ -3,128 +3,63 @@ package templatex
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
-	"path/filepath"
-	"regexp"
 )
 
-type ReadFunc func(pathname string) ([]byte, error)
-
-func DefaultReadFunc(pathname string) ([]byte, error) {
-	return ioutil.ReadFile(pathname)
-}
-
 type xRenderer interface {
-	Render(w io.Writer, pathname string, data map[string]interface{}) error
-	Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error)
-	GetCache(key string) (interface{}, bool)
-	RemoveCache(key string)
+	IsNil(tmpl interface{}) bool
+	NewTemplate(name string, funcs map[string]interface{}) interface{}
+	AddParseTree(dst, src interface{}, name string) error
+	ParseString(tmpl interface{}, str string) (interface{}, error)
+	Execute(tmpl interface{}, w io.Writer, data interface{}) error
 }
 
 type Template struct {
-	readfn ReadFunc
-	funcs  map[string]interface{}
-	text   xRenderer
-	html   xRenderer
+	*Runtime
+	cache    Cache
+	renderer xRenderer
 }
 
-func NewEx(readfn ReadFunc, funcs map[string]interface{}) *Template {
-	t := &Template{
-		readfn: readfn,
-		funcs:  funcs,
+func NewTemplate(rt *Runtime, cacheable bool, renderer xRenderer) *Template {
+	return &Template{
+		Runtime:  rt,
+		cache:    NewCache(cacheable),
+		renderer: renderer,
 	}
-	t.text = NewText(t)
-	t.html = NewHTML(t)
-	return t
 }
 
-func New() *Template {
-	return NewEx(DefaultReadFunc, DefaultFuncMap())
-}
-
-// match　{{(template|layout) "name" .}}
-var reTemplateAction = regexp.MustCompile(
-	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
-)
-
-func (t *Template) preprocess(r xRenderer, pathname string, cref map[string]struct{}) (interface{}, error) {
-	// refuse recursive parsing
-	if _, exists := cref[pathname]; exists {
-		return nil, fmt.Errorf("cannot parse %q recursively", pathname)
+func (t *Template) Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error) {
+	// use layout template as the base template if not nil
+	tmpl := layout
+	if t.renderer.IsNil(tmpl) {
+		tmpl = t.renderer.NewTemplate(pathname, t.funcs)
 	}
-	cref[pathname] = struct{}{}
-
-	// read file
-	buf, err := t.readfn(pathname)
-	if err != nil {
-		return nil, err
-	}
-
-	// lookup associated templates
-	var hasLayout bool
-	var layout interface{}
-	var includes = make(map[string]interface{})
-	var cur int
-	m := reTemplateAction.FindSubmatchIndex(buf)
-	for m != nil {
-		// manipulate index
-		m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7] = m[0]+cur, m[1]+cur, m[2]+cur, m[3]+cur, m[4]+cur, m[5]+cur, m[6]+cur, m[7]+cur
-		// update cursor
-		cur = m[1]
-		// extract action "value" pair
-		act := string(buf[m[4]:m[5]])
-		val := filepath.Clean(string(buf[m[6]:m[7]]))
-
-		// load layout template
-		isLayout := act == "layout"
-		if isLayout {
-			// layout already defined
-			if hasLayout {
-				return nil, fmt.Errorf("'layout' action cannot be performed twice")
-			}
-			hasLayout = true
-			// remove 'layout' action
-			buf = append(buf[:m[2]], buf[m[3]:]...)
-			// update cursor and index
-			cur = m[0]
+	// attach associated templates
+	for name, inc := range includes {
+		if err := t.renderer.AddParseTree(tmpl, inc, name); err != nil {
+			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
 		}
-
-		// parse associated template
-		vtmpl, exists := r.GetCache(val)
-		if !exists {
-			if vtmpl, err = t.preprocess(r, val[1:], cref); err != nil {
-				if isLayout {
-					return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
-				}
-				return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
-			}
-		}
-
-		if isLayout {
-			layout = vtmpl
-		} else {
-			includes[val] = vtmpl
-		}
-
-		m = reTemplateAction.FindSubmatchIndex(buf[cur:])
 	}
 
-	delete(cref, pathname)
-	return r.Parse(pathname, string(buf), layout, includes)
+	return t.renderer.ParseString(tmpl, text)
 }
 
-func (t *Template) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.text.Render(w, filepath.Clean(pathname), data)
+func (t *Template) Render(w io.Writer, pathname string, data map[string]interface{}) error {
+	tmpl, ok := t.cache.Get(pathname)
+	if !ok {
+		var err error
+		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
+		if err != nil {
+			return err
+		}
+		t.cache.Set(pathname, tmpl)
+	}
+	return t.renderer.Execute(tmpl, w, data)
 }
 
-func (t *Template) RenderHTML(w io.Writer, pathname string, data map[string]interface{}) error {
-	return t.html.Render(w, filepath.Clean(pathname), data)
+func (t *Template) GetCache(pathname string) (interface{}, bool) {
+	return t.cache.Get(pathname)
 }
 
-func (t *Template) RemoveCacheText(pathname string) {
-	t.text.RemoveCache(filepath.Clean(pathname))
-}
-
-func (t *Template) RemoveCacheHTML(pathname string) {
-	t.html.RemoveCache(filepath.Clean(pathname))
+func (t *Template) RemoveCache(pathname string) {
+	t.cache.Unset(pathname)
 }

@@ -3,69 +3,41 @@ package templatex
 import (
 	"fmt"
 	"io"
-	"sync"
 	"text/template"
 )
 
-type Text struct {
-	sync.Mutex
-	*Template
-	cache map[string]*template.Template
+type Text struct{}
+
+func NewText() Text {
+	return Text{}
 }
 
-func NewText(t *Template) *Text {
-	return &Text{
-		Template: t,
-		cache:    make(map[string]*template.Template),
+func (_ Text) IsNil(tmpl interface{}) bool {
+	switch v := tmpl.(type) {
+	case *template.Template:
+		return v == nil
+	case nil:
+		return true
 	}
+	panic(fmt.Errorf("%T is not compatible with *template.Template", tmpl))
 }
 
-func (t *Text) Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error) {
-	// use layout template as the base template if not nil
-	tmpl, ok := layout.(*template.Template)
-	if !ok {
-		tmpl = template.New(pathname).Funcs(t.funcs)
+func (_ Text) NewTemplate(name string, funcs map[string]interface{}) interface{} {
+	return template.New(name).Funcs(funcs)
+}
+
+func (_ Text) AddParseTree(dst, src interface{}, name string) error {
+	clone, err := src.(*template.Template).Clone()
+	if err == nil {
+		_, err = dst.(*template.Template).AddParseTree(name, clone.Lookup(name).Tree)
 	}
-	// attach associated templates
-	for name, inc := range includes {
-		clone, err := inc.(*template.Template).Clone()
-		if err == nil {
-			_, err = tmpl.AddParseTree(name, clone.Lookup(name).Tree)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
-		}
-	}
-
-	return tmpl.Parse(text)
+	return err
 }
 
-func (t *Text) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	t.Lock()
-	tmpl := t.cache[pathname]
-	t.Unlock()
-	if tmpl == nil {
-		v, err := t.preprocess(t, pathname, make(map[string]struct{}))
-		if err != nil {
-			return err
-		}
-		tmpl = v.(*template.Template)
-		t.Lock()
-		t.cache[pathname] = tmpl
-		t.Unlock()
-	}
-	return tmpl.Execute(w, data)
+func (_ Text) ParseString(tmpl interface{}, str string) (interface{}, error) {
+	return tmpl.(*template.Template).Parse(str)
 }
 
-func (t *Text) GetCache(pathname string) (interface{}, bool) {
-	t.Lock()
-	v, ok := t.cache[pathname]
-	t.Unlock()
-	return v, ok
-}
-
-func (t *Text) RemoveCache(pathname string) {
-	t.Lock()
-	delete(t.cache, pathname)
-	t.Unlock()
+func (_ Text) Execute(tmpl interface{}, w io.Writer, data interface{}) error {
+	return tmpl.(*template.Template).Execute(w, data)
 }

@@ -47,7 +47,7 @@ func TestNewEx(t *testing.T) {
 	funcs := map[string]interface{}{
 		"foo": "bar",
 	}
-	tpl := NewEx(readfn, funcs)
+	tpl := NewEx(readfn, funcs, false)
 
 	// test that readfn is equal to readfn
 	assert.Equal(t, fmt.Sprintf("%p", readfn), fmt.Sprintf("%p", tpl.readfn))
@@ -55,7 +55,7 @@ func TestNewEx(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%#v", funcs), fmt.Sprintf("%#v", tpl.funcs))
 }
 
-func TestTemplate_RenderHTML(t *testing.T) {
+func TestRuntime_RenderHTML(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -71,7 +71,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
+	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap(), false) }
 
 	// test that return syscall.ENOENT error
 	err := create().RenderHTML(b, "index.html", map[string]interface{}{
@@ -248,7 +248,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	assert.Regexp(t, `could not parse action {{layout "@invalid_layout.html"}} of "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
 }
 
-func TestTemplate_RenderText(t *testing.T) {
+func TestRuntime_RenderText(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -264,7 +264,7 @@ func TestTemplate_RenderText(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Template { return NewEx(readfn, DefaultFuncMap()) }
+	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap(), false) }
 
 	// test that render the file formatted as text/template
 	files["/root/dir/with_include.html"] = `hello {{.World}} {{template "@include.html" .}}`
@@ -276,7 +276,7 @@ func TestTemplate_RenderText(t *testing.T) {
 	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
 }
 
-func TestTemplate_RemoveCacheText(t *testing.T) {
+func TestRuntime_RemoveCacheText(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -292,7 +292,7 @@ func TestTemplate_RemoveCacheText(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap())
+	tpl := NewEx(readfn, DefaultFuncMap(), true)
 
 	// rendered template is to be cached
 	files["/root/dir/index.html"] = `hello {{.World}}`
@@ -309,7 +309,7 @@ func TestTemplate_RemoveCacheText(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestTemplate_RemoveCacheHTML(t *testing.T) {
+func TestRuntime_RemoveCacheHTML(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -325,7 +325,7 @@ func TestTemplate_RemoveCacheHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap())
+	tpl := NewEx(readfn, DefaultFuncMap(), true)
 
 	// rendered template is to be cached
 	files["/root/dir/index.html"] = `hello {{.World}}`
