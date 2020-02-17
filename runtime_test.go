@@ -55,7 +55,7 @@ func TestNewEx(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("%#v", funcs), fmt.Sprintf("%#v", tpl.funcs))
 }
 
-func TestTemplate_RenderHTML(t *testing.T) {
+func TestRuntime_RenderHTML(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -248,7 +248,7 @@ func TestTemplate_RenderHTML(t *testing.T) {
 	assert.Regexp(t, `could not parse action {{layout "@invalid_layout.html"}} of "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
 }
 
-func TestTemplate_RenderText(t *testing.T) {
+func TestRuntime_RenderText(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -276,7 +276,7 @@ func TestTemplate_RenderText(t *testing.T) {
 	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
 }
 
-func TestTemplate_RemoveCacheText(t *testing.T) {
+func TestRuntime_RemoveCacheText(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
@@ -309,7 +309,7 @@ func TestTemplate_RemoveCacheText(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestTemplate_RemoveCacheHTML(t *testing.T) {
+func TestRuntime_RemoveCacheHTML(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
 	files := map[string]string{}
