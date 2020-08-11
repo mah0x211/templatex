@@ -45,32 +45,22 @@ func fmSort(arg []interface{}) []interface{} {
 		jv := reflect.ValueOf(arg[j])
 		if !iv.IsValid() || !jv.IsValid() {
 			return iv.IsValid() == jv.IsValid()
-		} else if iv.Type() != jv.Type() {
-			return false
+		} else if iv.Type() == jv.Type() {
+			switch iv.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return iv.Int() < jv.Int()
+
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return iv.Uint() < jv.Uint()
+
+			case reflect.Float32, reflect.Float64:
+				return iv.Float() < jv.Float()
+
+			case reflect.String:
+				return iv.String() < jv.String()
+			}
 		}
-
-		switch iv.Kind() {
-		case reflect.Bool:
-			return iv.Bool() == jv.Bool()
-
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return iv.Int() < jv.Int()
-
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-			return iv.Uint() < jv.Uint()
-
-		case reflect.Float32, reflect.Float64:
-			return iv.Float() < jv.Float()
-
-		case reflect.Complex64, reflect.Complex128:
-			return iv.Complex() == jv.Complex()
-
-		case reflect.String:
-			return iv.String() < jv.String()
-
-		default:
-			return false
-		}
+		return false
 	})
 
 	return arg
