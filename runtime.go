@@ -44,7 +44,7 @@ func New() *Runtime {
 
 // match　{{(template|layout) "name" .}}
 var reTemplateAction = regexp.MustCompile(
-	`[^{](\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
+	`[^{]*(\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
 func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]struct{}) (interface{}, error) {
@@ -93,10 +93,7 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 		vtmpl, exists := t.GetCache(val)
 		if !exists {
 			if vtmpl, err = rt.preprocess(t, val[1:], cref); err != nil {
-				if isLayout {
-					return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
-				}
-				return nil, fmt.Errorf("could not parse action {{%s %q}} of %q: %v", act, val, pathname, err)
+				return nil, fmt.Errorf("could not preprocess {{%s %q}} in %q: %v", act, val, pathname, err)
 			}
 		}
 

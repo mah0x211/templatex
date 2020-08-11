@@ -174,7 +174,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
-	assert.Regexp(t, `could not parse action {{template "@invalid.html"}} of "with_invalid.html".+ invalid.html:.+ unexpected `, err)
+	assert.Regexp(t, `could not preprocess {{template "@invalid.html"}} in "with_invalid.html".+ invalid.html:.+ unexpected `, err)
 
 	// test that render with layout template
 	b.Reset()
@@ -245,7 +245,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	err = create().RenderHTML(b, "with_invalid_layout.html", map[string]interface{}{
 		"World": "world!",
 	})
-	assert.Regexp(t, `could not parse action {{layout "@invalid_layout.html"}} of "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
+	assert.Regexp(t, `could not preprocess {{layout "@invalid_layout.html"}} in "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
 }
 
 func TestRuntime_RenderText(t *testing.T) {
