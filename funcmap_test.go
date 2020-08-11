@@ -53,6 +53,13 @@ func TestFuncMap_ToSlice(t *testing.T) {
 }
 
 func TestFuncMap_Sort(t *testing.T) {
+	// test that returns sorted slice with bool arguments
+	assert.Equal(t, []interface{}{
+		true, false, true, false, true, false,
+	}, fmSort([]interface{}{
+		true, false, true, false, true, false,
+	}))
+
 	// test that returns sorted slice with integer arguments
 	assert.Equal(t, []interface{}{
 		1, 5, 9, 13, 18, 26, 32,
@@ -60,18 +67,21 @@ func TestFuncMap_Sort(t *testing.T) {
 		1, 13, 5, 32, 9, 18, 26,
 	}))
 
+	// test that returns sorted slice with unsigned integer arguments
 	assert.Equal(t, []interface{}{
 		uint(1), uint(5), uint(9), uint(13), uint(18), uint(26), uint(32),
 	}, fmSort([]interface{}{
 		uint(1), uint(13), uint(5), uint(32), uint(9), uint(18), uint(26),
 	}))
 
+	// test that returns sorted slice with float arguments
 	assert.Equal(t, []interface{}{
 		0.1, 5.0, 9.3, 13.91, 18.01, 26.43, 32.98,
 	}, fmSort([]interface{}{
 		0.1, 13.91, 5.0, 32.98, 9.3, 18.01, 26.43,
 	}))
 
+	// test that returns sorted slice with string
 	assert.Equal(t, []interface{}{
 		"apple", "banana", "cherry", "grape", "pineapple",
 	}, fmSort([]interface{}{
