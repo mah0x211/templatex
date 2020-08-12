@@ -16,7 +16,7 @@ func DefaultReadFunc(pathname string) ([]byte, error) {
 
 type xTemplate interface {
 	Render(w io.Writer, pathname string, data map[string]interface{}) error
-	Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error)
+	Parse(f *File, text string, layout *File, includes map[string]*File) error
 }
 
 type Runtime struct {
@@ -47,11 +47,11 @@ var reTemplateAction = regexp.MustCompile(
 	`[^{]*(\{{2}\s*(template|layout)\s+"(@[^"]+)"[^}]*}{2})`,
 )
 
-func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]struct{}) (interface{}, error) {
+func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]struct{}) (*File, error) {
 	// get cached template
-	tmpl, ok := rt.cache.Get(pathname)
-	if ok {
-		return tmpl, nil
+	f := rt.cache.Get(pathname)
+	if f != nil {
+		return f, nil
 	}
 
 	// refuse recursive parsing
@@ -67,9 +67,9 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 	}
 
 	// lookup associated templates
-	var hasLayout bool
-	var layout interface{}
-	var includes = make(map[string]interface{})
+	f = createFile(rt.cache, pathname)
+	var layout *File
+	var includes = make(map[string]*File)
 	var cur int
 	m := reTemplateAction.FindSubmatchIndex(buf)
 	for m != nil {
@@ -83,40 +83,39 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 
 		// load layout template
 		isLayout := act == "layout"
-		if isLayout {
-			// layout already defined
-			if hasLayout {
-				return nil, fmt.Errorf("'layout' action cannot be performed twice")
-			}
-			hasLayout = true
-			// remove 'layout' action
-			buf = append(buf[:m[2]], buf[m[3]:]...)
-			// update cursor and index
-			cur = m[0]
+		if isLayout && layout != nil {
+			return nil, fmt.Errorf("'layout' action cannot be performed twice")
 		}
 
 		// parse associated template
-		vtmpl, err := rt.preprocess(t, val[1:], cref)
+		af, err := rt.preprocess(t, val[1:], cref)
 		if err != nil {
 			return nil, fmt.Errorf("could not preprocess {{%s %q}} in %q: %v", act, val, pathname, err)
 		}
 
 		if isLayout {
-			layout = vtmpl
+			layout = af
+			// remove 'layout' action
+			buf = append(buf[:m[2]], buf[m[3]:]...)
+			// update cursor and index
+			cur = m[0]
 		} else {
-			includes[val] = vtmpl
+			includes[val] = af
+			f.addChild(af)
+			af.addParent(f)
 		}
 
 		m = reTemplateAction.FindSubmatchIndex(buf[cur:])
 	}
 
 	delete(cref, pathname)
-	if tmpl, err = t.Parse(pathname, string(buf), layout, includes); err != nil {
+	err = t.Parse(f, string(buf), layout, includes)
+	if err != nil {
 		return nil, err
 	}
-	rt.cache.Set(pathname, tmpl)
+	rt.cache.Set(f.name, f)
 
-	return tmpl, nil
+	return f, nil
 }
 
 func (rt *Runtime) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {

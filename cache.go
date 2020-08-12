@@ -2,9 +2,41 @@ package templatex
 
 import "sync"
 
+type File struct {
+	cache  Cache
+	name   string
+	tmpl   interface{}
+	parent map[string]*File
+	child  map[string]*File
+}
+
+func createFile(cache Cache, name string) *File {
+	return &File{
+		cache:  cache,
+		name:   name,
+		parent: make(map[string]*File),
+		child:  make(map[string]*File),
+	}
+}
+
+func (f *File) addParent(af *File) {
+	f.parent[af.name] = af
+}
+
+func (f *File) addChild(af *File) {
+	f.child[af.name] = af
+}
+
+func (f *File) Uncache() {
+	f.cache.Unset(f.name)
+	for _, p := range f.parent {
+		p.Uncache()
+	}
+}
+
 type Cache interface {
-	Get(k string) (interface{}, bool)
-	Set(k string, v interface{})
+	Get(k string) *File
+	Set(k string, f *File)
 	Unset(k string)
 }
 
@@ -16,34 +48,33 @@ func NewNopCache() Cache {
 	return NopCache{}
 }
 
-func (c NopCache) Get(_ string) (interface{}, bool) {
-	return nil, false
+func (c NopCache) Get(_ string) *File {
+	return nil
 }
-func (c NopCache) Set(_ string, _ interface{}) {}
-func (c NopCache) Unset(_ string)              {}
+func (c NopCache) Set(_ string, _ *File) {}
+func (c NopCache) Unset(_ string)        {}
 
 type MapCache struct {
 	Cache
 	sync.Mutex
-	data map[string]interface{}
+	data map[string]*File
 }
 
 func NewMapCache() Cache {
 	return &MapCache{
-		data: make(map[string]interface{}),
+		data: make(map[string]*File),
 	}
 }
 
-func (c *MapCache) Get(k string) (interface{}, bool) {
+func (c *MapCache) Get(k string) *File {
 	c.Lock()
-	v, ok := c.data[k]
-	c.Unlock()
-	return v, ok
+	defer c.Unlock()
+	return c.data[k]
 }
 
-func (c *MapCache) Set(k string, v interface{}) {
+func (c *MapCache) Set(k string, f *File) {
 	c.Lock()
-	c.data[k] = v
+	c.data[k] = f
 	c.Unlock()
 }
 

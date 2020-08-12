@@ -35,6 +35,21 @@ func TestHTML_NewTemplate(t *testing.T) {
 	assert.False(t, r.IsNil(tmpl))
 }
 
+func TestHTML_Clone(t *testing.T) {
+	r := HTML{}
+	tmpl := r.NewTemplate("foo", nil)
+
+	// test that clone template
+	clone, err := r.Clone(tmpl)
+	assert.NoError(t, err)
+	assert.NotNil(t, clone)
+
+	// test that will be panic if incompatible value passed
+	assert.Panics(t, func() {
+		r.Clone(nil)
+	})
+}
+
 func TestHTML_AddParseTree(t *testing.T) {
 	r := HTML{}
 	a := r.NewTemplate("foo", nil)

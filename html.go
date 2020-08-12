@@ -12,6 +12,14 @@ func NewHTML() HTML {
 	return HTML{}
 }
 
+func (_ HTML) Clone(tmpl interface{}) (interface{}, error) {
+	switch v := tmpl.(type) {
+	case *template.Template:
+		return v.Clone()
+	}
+	panic(fmt.Errorf("%T is not compatible with *template.Template", tmpl))
+}
+
 func (_ HTML) IsNil(tmpl interface{}) bool {
 	switch v := tmpl.(type) {
 	case *template.Template:
@@ -27,10 +35,9 @@ func (_ HTML) NewTemplate(name string, funcs map[string]interface{}) interface{}
 }
 
 func (_ HTML) AddParseTree(dst, src interface{}, name string) error {
-	clone, err := src.(*template.Template).Clone()
-	if err == nil {
-		_, err = dst.(*template.Template).AddParseTree(name, clone.Lookup(name).Tree)
-	}
+	_, err := dst.(*template.Template).AddParseTree(
+		name, src.(*template.Template).Lookup(name).Tree,
+	)
 	return err
 }
 
