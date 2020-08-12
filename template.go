@@ -15,14 +15,12 @@ type xRenderer interface {
 
 type Template struct {
 	*Runtime
-	cache    Cache
 	renderer xRenderer
 }
 
-func NewTemplate(rt *Runtime, cacheable bool, renderer xRenderer) *Template {
+func NewTemplate(rt *Runtime, renderer xRenderer) *Template {
 	return &Template{
 		Runtime:  rt,
-		cache:    NewCache(cacheable),
 		renderer: renderer,
 	}
 }
@@ -44,22 +42,9 @@ func (t *Template) Parse(pathname, text string, layout interface{}, includes map
 }
 
 func (t *Template) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	tmpl, ok := t.cache.Get(pathname)
-	if !ok {
-		var err error
-		tmpl, err = t.preprocess(t, pathname, make(map[string]struct{}))
-		if err != nil {
-			return err
-		}
-		t.cache.Set(pathname, tmpl)
+	tmpl, err := t.preprocess(t, pathname, make(map[string]struct{}))
+	if err != nil {
+		return err
 	}
 	return t.renderer.Execute(tmpl, w, data)
-}
-
-func (t *Template) GetCache(pathname string) (interface{}, bool) {
-	return t.cache.Get(pathname)
-}
-
-func (t *Template) RemoveCache(pathname string) {
-	t.cache.Unset(pathname)
 }
