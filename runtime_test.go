@@ -47,7 +47,7 @@ func TestNewEx(t *testing.T) {
 	funcs := map[string]interface{}{
 		"foo": "bar",
 	}
-	tpl := NewEx(readfn, funcs, false)
+	tpl := NewEx(readfn, NewNopCache(), funcs)
 
 	// test that readfn is equal to readfn
 	assert.Equal(t, fmt.Sprintf("%p", readfn), fmt.Sprintf("%p", tpl.readfn))
@@ -71,7 +71,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap(), false) }
+	create := func() *Runtime { return NewEx(readfn, NewNopCache(), DefaultFuncMap()) }
 
 	// test that return syscall.ENOENT error
 	err := create().RenderHTML(b, "index.html", map[string]interface{}{
@@ -251,8 +251,13 @@ func TestRuntime_RenderHTML(t *testing.T) {
 func TestRuntime_RenderText(t *testing.T) {
 	// setup
 	rootdir := "/root/dir/"
-	files := map[string]string{}
+	files := map[string]string{
+		"/root/dir/with_include.html": `hello {{.World}} {{template "@include.html" .}}`,
+		"/root/dir/include.html":      `{{define "@include.html"}}with {{.SubMessage}}{{end}}`,
+	}
+	nread := 0
 	readfn := func(pathname string) ([]byte, error) {
+		nread++
 		if pathname == "/" {
 			pathname = "/index.html"
 		}
@@ -264,80 +269,35 @@ func TestRuntime_RenderText(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Runtime { return NewEx(readfn, DefaultFuncMap(), false) }
+	cache := NewMapCache()
+	rt := NewEx(readfn, cache, DefaultFuncMap())
 
 	// test that render the file formatted as text/template
-	files["/root/dir/with_include.html"] = `hello {{.World}} {{template "@include.html" .}}`
-	files["/root/dir/include.html"] = `{{define "@include.html"}}with {{.SubMessage}}{{end}}`
-	assert.NoError(t, create().RenderText(b, "with_include.html", map[string]interface{}{
+	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{
 		"World":      "<world!>",
 		"SubMessage": "sub template!",
 	}))
 	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
-}
+	assert.Equal(t, 2, nread)
 
-func TestRuntime_RemoveCacheText(t *testing.T) {
-	// setup
-	rootdir := "/root/dir/"
-	files := map[string]string{}
-	readfn := func(pathname string) ([]byte, error) {
-		if pathname == "/" {
-			pathname = "/index.html"
-		}
-
-		if s, ok := files[filepath.Join(rootdir, pathname)]; ok {
-			return []byte(s), nil
-		}
-
-		return nil, syscall.ENOENT
-	}
-	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap(), true)
-
-	// rendered template is to be cached
-	files["/root/dir/index.html"] = `hello {{.World}}`
-	assert.NoError(t, tpl.RenderText(b, "/index.html", map[string]interface{}{
-		"World": "<world!>",
+	// test that render the cached template
+	b.Reset()
+	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
 	}))
+	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
+	assert.Equal(t, 2, nread)
 
-	_, ok := tpl.text.GetCache("/index.html")
-	assert.True(t, ok)
-
-	// test that remove cached template
-	tpl.RemoveCacheText("/index.html")
-	_, ok = tpl.text.GetCache("/index.html")
-	assert.False(t, ok)
-}
-
-func TestRuntime_RemoveCacheHTML(t *testing.T) {
-	// setup
-	rootdir := "/root/dir/"
-	files := map[string]string{}
-	readfn := func(pathname string) ([]byte, error) {
-		if pathname == "/" {
-			pathname = "/index.html"
-		}
-
-		if s, ok := files[filepath.Join(rootdir, pathname)]; ok {
-			return []byte(s), nil
-		}
-
-		return nil, syscall.ENOENT
-	}
-	b := bytes.NewBuffer(nil)
-	tpl := NewEx(readfn, DefaultFuncMap(), true)
-
-	// rendered template is to be cached
-	files["/root/dir/index.html"] = `hello {{.World}}`
-	assert.NoError(t, tpl.RenderHTML(b, "/index.html", map[string]interface{}{
-		"World": "&lt;world!&gt;",
+	// test that render the file again
+	b.Reset()
+	cache.Unset("with_include.html")
+	cache.Unset("include.html")
+	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
 	}))
+	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
+	assert.Equal(t, 4, nread)
 
-	_, ok := tpl.html.GetCache("/index.html")
-	assert.True(t, ok)
-
-	// test that remove cached template
-	tpl.RemoveCacheHTML("/index.html")
-	_, ok = tpl.html.GetCache("/index.html")
-	assert.False(t, ok)
 }

@@ -8,17 +8,12 @@ type Cache interface {
 	Unset(k string)
 }
 
-func NewCache(cacheable bool) Cache {
-	if cacheable {
-		return &MapCache{
-			data: make(map[string]interface{}),
-		}
-	}
-	return NopCache{}
-}
-
 type NopCache struct {
 	Cache
+}
+
+func NewNopCache() Cache {
+	return NopCache{}
 }
 
 func (c NopCache) Get(_ string) (interface{}, bool) {
@@ -31,6 +26,12 @@ type MapCache struct {
 	Cache
 	sync.Mutex
 	data map[string]interface{}
+}
+
+func NewMapCache() Cache {
+	return &MapCache{
+		data: make(map[string]interface{}),
+	}
 }
 
 func (c *MapCache) Get(k string) (interface{}, bool) {

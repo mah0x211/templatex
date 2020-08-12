@@ -17,29 +17,29 @@ func DefaultReadFunc(pathname string) ([]byte, error) {
 type xTemplate interface {
 	Render(w io.Writer, pathname string, data map[string]interface{}) error
 	Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error)
-	GetCache(key string) (interface{}, bool)
-	RemoveCache(key string)
 }
 
 type Runtime struct {
 	readfn ReadFunc
+	cache  Cache
 	funcs  map[string]interface{}
 	text   xTemplate
 	html   xTemplate
 }
 
-func NewEx(readfn ReadFunc, funcs map[string]interface{}, cacheable bool) *Runtime {
+func NewEx(readfn ReadFunc, cache Cache, funcs map[string]interface{}) *Runtime {
 	rt := &Runtime{
 		readfn: readfn,
+		cache:  cache,
 		funcs:  funcs,
 	}
-	rt.text = NewTemplate(rt, cacheable, NewText())
-	rt.html = NewTemplate(rt, cacheable, NewHTML())
+	rt.text = NewTemplate(rt, NewText())
+	rt.html = NewTemplate(rt, NewHTML())
 	return rt
 }
 
 func New() *Runtime {
-	return NewEx(DefaultReadFunc, DefaultFuncMap(), true)
+	return NewEx(DefaultReadFunc, NewNopCache(), DefaultFuncMap())
 }
 
 // match　{{(template|layout) "name" .}}
@@ -48,6 +48,12 @@ var reTemplateAction = regexp.MustCompile(
 )
 
 func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]struct{}) (interface{}, error) {
+	// get cached template
+	tmpl, ok := rt.cache.Get(pathname)
+	if ok {
+		return tmpl, nil
+	}
+
 	// refuse recursive parsing
 	if _, exists := cref[pathname]; exists {
 		return nil, fmt.Errorf("cannot parse %q recursively", pathname)
@@ -90,11 +96,9 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 		}
 
 		// parse associated template
-		vtmpl, exists := t.GetCache(val)
-		if !exists {
-			if vtmpl, err = rt.preprocess(t, val[1:], cref); err != nil {
-				return nil, fmt.Errorf("could not preprocess {{%s %q}} in %q: %v", act, val, pathname, err)
-			}
+		vtmpl, err := rt.preprocess(t, val[1:], cref)
+		if err != nil {
+			return nil, fmt.Errorf("could not preprocess {{%s %q}} in %q: %v", act, val, pathname, err)
 		}
 
 		if isLayout {
@@ -107,7 +111,12 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 	}
 
 	delete(cref, pathname)
-	return t.Parse(pathname, string(buf), layout, includes)
+	if tmpl, err = t.Parse(pathname, string(buf), layout, includes); err != nil {
+		return nil, err
+	}
+	rt.cache.Set(pathname, tmpl)
+
+	return tmpl, nil
 }
 
 func (rt *Runtime) RenderText(w io.Writer, pathname string, data map[string]interface{}) error {
@@ -116,12 +125,4 @@ func (rt *Runtime) RenderText(w io.Writer, pathname string, data map[string]inte
 
 func (rt *Runtime) RenderHTML(w io.Writer, pathname string, data map[string]interface{}) error {
 	return rt.html.Render(w, filepath.Clean(pathname), data)
-}
-
-func (rt *Runtime) RemoveCacheText(pathname string) {
-	rt.text.RemoveCache(filepath.Clean(pathname))
-}
-
-func (rt *Runtime) RemoveCacheHTML(pathname string) {
-	rt.html.RemoveCache(filepath.Clean(pathname))
 }
