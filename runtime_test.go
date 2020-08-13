@@ -246,6 +246,44 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"World": "world!",
 	})
 	assert.Regexp(t, `could not preprocess {{layout "@invalid_layout.html"}} in "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
+
+	// test that rendered templates are cached
+	b.Reset()
+	files = map[string]string{
+		"/root/dir/footer.html":       `{{define "@footer.html"}}with footer{{end}}`,
+		"/root/dir/layout.html":       `layout: {{template "content" .}} {{template "@footer.html"}}`,
+		"/root/dir/with_layout.html":  `{{define "content"}}hello {{.World}}{{end}}{{layout "@layout.html"}}`,
+		"/root/dir/with_layout2.html": `{{define "content"}}hello 2 {{.World}}{{end}}{{layout "@layout.html"}}`,
+	}
+	cache := NewMapCache()
+	rt := NewEx(readfn, cache, DefaultFuncMap())
+	err = rt.RenderHTML(b, "with_layout.html", map[string]interface{}{
+		"World": "world!",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, `layout: hello world! with footer`, b.String())
+	assert.NotNil(t, cache.Get("layout.html"))
+	assert.NotNil(t, cache.Get("with_layout.html"))
+
+	b.Reset()
+	err = rt.RenderHTML(b, "with_layout2.html", map[string]interface{}{
+		"World": "world!",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, `layout: hello 2 world! with footer`, b.String())
+	assert.NotNil(t, cache.Get("layout.html"))
+	assert.NotNil(t, cache.Get("with_layout.html"))
+	assert.NotNil(t, cache.Get("with_layout2.html"))
+
+	// test that rendered templates are cached
+	b.Reset()
+	cache.Get("with_layout.html").Uncache()
+	err = rt.RenderHTML(b, "with_layout.html", map[string]interface{}{
+		"World": "world!",
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, `layout: hello world! with footer`, b.String())
+	assert.NotNil(t, cache.Get("with_layout2.html"))
 }
 
 func TestRuntime_RenderText(t *testing.T) {
@@ -291,8 +329,8 @@ func TestRuntime_RenderText(t *testing.T) {
 
 	// test that render the file again
 	b.Reset()
-	cache.Unset("with_include.html")
-	cache.Unset("include.html")
+	cache.Get("with_include.html").Uncache()
+	cache.Get("include.html").Uncache()
 	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{
 		"World":      "<world!>",
 		"SubMessage": "sub template!",

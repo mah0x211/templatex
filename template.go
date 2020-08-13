@@ -6,6 +6,7 @@ import (
 )
 
 type xRenderer interface {
+	Clone(tmpl interface{}) (interface{}, error)
 	IsNil(tmpl interface{}) bool
 	NewTemplate(name string, funcs map[string]interface{}) interface{}
 	AddParseTree(dst, src interface{}, name string) error
@@ -25,26 +26,36 @@ func NewTemplate(rt *Runtime, renderer xRenderer) *Template {
 	}
 }
 
-func (t *Template) Parse(pathname, text string, layout interface{}, includes map[string]interface{}) (interface{}, error) {
-	// use layout template as the base template if not nil
-	tmpl := layout
-	if t.renderer.IsNil(tmpl) {
-		tmpl = t.renderer.NewTemplate(pathname, t.funcs)
-	}
-	// attach associated templates
-	for name, inc := range includes {
-		if err := t.renderer.AddParseTree(tmpl, inc, name); err != nil {
-			return nil, fmt.Errorf("could not attach associated template %q to %q: %v", name, pathname, err)
+func (t *Template) Parse(f *File, text string, layout *File, includes map[string]*File) error {
+	var err error
+
+	// NOTE: layout template will be the root template but it cannot be
+	// parsed more than twice. so, it must use the cloned template.
+	if layout == nil {
+		f.tmpl = t.renderer.NewTemplate(f.name, t.funcs)
+	} else if f.tmpl, err = t.renderer.Clone(layout.tmpl); err != nil {
+		return err
+	} else {
+		for _, c := range layout.child {
+			c.addParent(f)
 		}
 	}
 
-	return t.renderer.ParseString(tmpl, text)
+	// attach associated templates
+	for name, inc := range includes {
+		if err := t.renderer.AddParseTree(f.tmpl, inc.tmpl, name); err != nil {
+			return fmt.Errorf("could not attach associated template %q to %q: %v", name, f.name, err)
+		}
+	}
+
+	f.tmpl, err = t.renderer.ParseString(f.tmpl, text)
+	return err
 }
 
 func (t *Template) Render(w io.Writer, pathname string, data map[string]interface{}) error {
-	tmpl, err := t.preprocess(t, pathname, make(map[string]struct{}))
+	f, err := t.preprocess(t, pathname, make(map[string]struct{}))
 	if err != nil {
 		return err
 	}
-	return t.renderer.Execute(tmpl, w, data)
+	return t.renderer.Execute(f.tmpl, w, data)
 }

@@ -8,6 +8,21 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestText_Clone(t *testing.T) {
+	r := Text{}
+	tmpl := r.NewTemplate("foo", nil)
+
+	// test that clone template
+	clone, err := r.Clone(tmpl)
+	assert.NoError(t, err)
+	assert.NotNil(t, clone)
+
+	// test that will be panic if incompatible value passed
+	assert.Panics(t, func() {
+		r.Clone(nil)
+	})
+}
+
 func TestText_IsNil(t *testing.T) {
 	r := Text{}
 
