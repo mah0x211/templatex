@@ -88,7 +88,7 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 		}
 
 		// parse associated template
-		af, err := rt.preprocess(t, val[1:], cref)
+		af, err := rt.preprocess(t, val, cref)
 		if err != nil {
 			return nil, fmt.Errorf("could not preprocess {{%s %q}} in %q: %v", act, val, pathname, err)
 		}

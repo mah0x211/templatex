@@ -105,7 +105,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 			hello {{.World}} {{template "@include.html" .}}
 			{{template "@include.html" .}} is included twice
 		`,
-		"/root/dir/include.html": `
+		"/root/dir/@include.html": `
 			{{define "@include.html"}}
 			with {{.SubMessage}}
 			{{end}}
@@ -126,12 +126,12 @@ func TestRuntime_RenderHTML(t *testing.T) {
 			{{template "@include.html" .}}
 			{{template "@nested_include.html" .}}
 		`,
-		"/root/dir/include.html": `
+		"/root/dir/@include.html": `
 			{{define "@include.html"}}
 			with {{.SubMessage}}
 			{{end}}
 		`,
-		"/root/dir/nested_include.html": `
+		"/root/dir/@nested_include.html": `
 			{{define "@nested_include.html"}}
 			{{template "@include.html" .}}
 			{{end}}
@@ -150,7 +150,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"/root/dir/with_include_recursively.html": `
 			hello {{.World}} {{template "@include_recursively.html" .}}
 		`,
-		"/root/dir/include_recursively.html": `
+		"/root/dir/@include_recursively.html": `
 			{{define "@include_recursively.html"}}
 			{{template "@include_recursively.html" .}}
 			{{end}}
@@ -160,7 +160,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"World": "world",
 	})
 	assert.Error(t, err)
-	assert.Regexp(t, `cannot parse "include_recursively.html" recursively`, err)
+	assert.Regexp(t, `cannot parse "@include_recursively.html" recursively`, err)
 
 	// test that insert sub template error as html comments
 	b.Reset()
@@ -168,24 +168,24 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"/root/dir/with_invalid.html": `
 			hello {{.World}} {{template "@invalid.html" .}}
 		`,
-		"/root/dir/invalid.html": `hello {{.World}`,
+		"/root/dir/@invalid.html": `hello {{.World}`,
 	}
 	err = create().RenderHTML(b, "with_invalid.html", map[string]interface{}{
 		"World":      "world",
 		"SubMessage": "sub template!",
 	})
-	assert.Regexp(t, `could not preprocess {{template "@invalid.html"}} in "with_invalid.html".+ invalid.html:.+ unexpected `, err)
+	assert.Regexp(t, `could not preprocess {{template "@invalid.html"}} in "with_invalid.html".+ @invalid.html:.+ unexpected `, err)
 
 	// test that render with layout template
 	b.Reset()
 	files = map[string]string{
-		"/root/dir/layout.html": `
+		"/root/dir/@layout.html": `
 			layout
 			----------------------
 			{{template "content" .}}
 			----------------------
 		`,
-		"/root/dir/include.html": `
+		"/root/dir/@include.html": `
 			{{define "@include.html"}}
 			with {{.SubMessage}}
 			{{end}}
@@ -207,7 +207,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	// test that can specify only one layout template
 	b.Reset()
 	files = map[string]string{
-		"/root/dir/layout.html": `
+		"/root/dir/@layout.html": `
 			layout
 			----------------------
 			{{template "content" .}}
@@ -229,7 +229,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	// test that returns error if failed to parse layout template
 	b.Reset()
 	files = map[string]string{
-		"/root/dir/invalid_layout.html": `
+		"/root/dir/@invalid_layout.html": `
 			layout
 			----------------------
 			{{template "content" .}
@@ -245,13 +245,13 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	err = create().RenderHTML(b, "with_invalid_layout.html", map[string]interface{}{
 		"World": "world!",
 	})
-	assert.Regexp(t, `could not preprocess {{layout "@invalid_layout.html"}} in "with_invalid_layout.html".+ invalid_layout.html:.+ unexpected`, err)
+	assert.Regexp(t, `could not preprocess {{layout "@invalid_layout.html"}} in "with_invalid_layout.html".+ @invalid_layout.html:.+ unexpected`, err)
 
 	// test that rendered templates are cached
 	b.Reset()
 	files = map[string]string{
-		"/root/dir/footer.html":       `{{define "@footer.html"}}with footer{{end}}`,
-		"/root/dir/layout.html":       `layout: {{template "content" .}} {{template "@footer.html"}}`,
+		"/root/dir/@footer.html":      `{{define "@footer.html"}}with footer{{end}}`,
+		"/root/dir/@layout.html":      `layout: {{template "content" .}} {{template "@footer.html"}}`,
 		"/root/dir/with_layout.html":  `{{define "content"}}hello {{.World}}{{end}}{{layout "@layout.html"}}`,
 		"/root/dir/with_layout2.html": `{{define "content"}}hello 2 {{.World}}{{end}}{{layout "@layout.html"}}`,
 	}
@@ -262,7 +262,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, `layout: hello world! with footer`, b.String())
-	assert.NotNil(t, cache.Get("layout.html"))
+	assert.NotNil(t, cache.Get("@layout.html"))
 	assert.NotNil(t, cache.Get("with_layout.html"))
 
 	b.Reset()
@@ -271,7 +271,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, `layout: hello 2 world! with footer`, b.String())
-	assert.NotNil(t, cache.Get("layout.html"))
+	assert.NotNil(t, cache.Get("@layout.html"))
 	assert.NotNil(t, cache.Get("with_layout.html"))
 	assert.NotNil(t, cache.Get("with_layout2.html"))
 
@@ -291,7 +291,7 @@ func TestRuntime_RenderText(t *testing.T) {
 	rootdir := "/root/dir/"
 	files := map[string]string{
 		"/root/dir/with_include.html": `hello {{.World}} {{template "@include.html" .}}`,
-		"/root/dir/include.html":      `{{define "@include.html"}}with {{.SubMessage}}{{end}}`,
+		"/root/dir/@include.html":     `{{define "@include.html"}}with {{.SubMessage}}{{end}}`,
 	}
 	nread := 0
 	readfn := func(pathname string) ([]byte, error) {
@@ -330,7 +330,7 @@ func TestRuntime_RenderText(t *testing.T) {
 	// test that render the file again
 	b.Reset()
 	cache.Get("with_include.html").Uncache()
-	cache.Get("include.html").Uncache()
+	cache.Get("@include.html").Uncache()
 	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{
 		"World":      "<world!>",
 		"SubMessage": "sub template!",
