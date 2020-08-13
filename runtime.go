@@ -102,8 +102,8 @@ func (rt *Runtime) preprocess(t xTemplate, pathname string, cref map[string]stru
 		} else {
 			includes[val] = af
 			f.addChild(af)
-			af.addParent(f)
 		}
+		af.addParent(f)
 
 		m = reTemplateAction.FindSubmatchIndex(buf[cur:])
 	}
