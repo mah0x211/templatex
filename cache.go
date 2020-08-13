@@ -19,6 +19,10 @@ func createFile(cache Cache, name string) *File {
 	}
 }
 
+func (f *File) Name() string {
+	return f.name
+}
+
 func (f *File) addParent(af *File) {
 	f.parent[af.name] = af
 }

@@ -264,6 +264,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 	assert.Equal(t, `layout: hello world! with footer`, b.String())
 	assert.NotNil(t, cache.Get("@layout.html"))
 	assert.NotNil(t, cache.Get("with_layout.html"))
+	assert.Equal(t, "@layout.html", cache.Get("@layout.html").Name())
 
 	b.Reset()
 	err = rt.RenderHTML(b, "with_layout2.html", map[string]interface{}{
