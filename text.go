@@ -34,11 +34,15 @@ func (_ Text) NewTemplate(name string, funcs map[string]interface{}) interface{}
 	return template.New(name).Funcs(funcs)
 }
 
-func (_ Text) AddParseTree(dst, src interface{}, name string) error {
-	_, err := dst.(*template.Template).AddParseTree(
-		name, src.(*template.Template).Lookup(name).Tree,
-	)
-	return err
+func (_ Text) AddParseTree(dst, src interface{}) error {
+	dt := dst.(*template.Template)
+	for _, t := range src.(*template.Template).Templates() {
+		_, err := dt.AddParseTree(t.Name(), t.Tree)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (_ Text) ParseString(tmpl interface{}, str string) (interface{}, error) {

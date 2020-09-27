@@ -9,7 +9,7 @@ type xRenderer interface {
 	Clone(tmpl interface{}) (interface{}, error)
 	IsNil(tmpl interface{}) bool
 	NewTemplate(name string, funcs map[string]interface{}) interface{}
-	AddParseTree(dst, src interface{}, name string) error
+	AddParseTree(dst, src interface{}) error
 	ParseString(tmpl interface{}, str string) (interface{}, error)
 	Execute(tmpl interface{}, w io.Writer, data interface{}) error
 }
@@ -43,7 +43,7 @@ func (t *Template) Parse(f *File, text string, layout *File, includes map[string
 
 	// attach associated templates
 	for name, inc := range includes {
-		if err := t.renderer.AddParseTree(f.tmpl, inc.tmpl, name); err != nil {
+		if err := t.renderer.AddParseTree(f.tmpl, inc.tmpl); err != nil {
 			return fmt.Errorf("could not attach associated template %q to %q: %v", name, f.name, err)
 		}
 	}
