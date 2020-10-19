@@ -124,29 +124,6 @@ func TestFuncMap_Sub(t *testing.T) {
 	assert.Equal(t, 3, fmSub(5, 2, 9, 3))
 }
 
-func TestFuncMap_HashSet(t *testing.T) {
-	// test that returns new instance fnHashSet data structure
-	s := fmNewHashSet()
-	assert.Equal(t, &fmHashSet{data: map[interface{}]bool{}}, s)
-
-	// test that returns true if value is stored in hashset
-	assert.True(t, s.Set("foo"))
-	assert.True(t, s.Set("bar"))
-
-	// test that returns false if value is already stored in hashset
-	assert.False(t, s.Set("foo"))
-	assert.False(t, s.Set("bar"))
-
-	// test that returns true if value has been removed from hashset
-	assert.True(t, s.Unset("foo"))
-
-	// test that returns false if value does not exists
-	assert.False(t, s.Unset("foo"))
-
-	// test that returns true if value is stored in hashset
-	assert.True(t, s.Set("foo"))
-}
-
 func TestFuncMap_JSON2Map(t *testing.T) {
 	// test that parse string as object
 	data, err := fmJSON2Map(`{ "hello": "world!" }`)
@@ -176,4 +153,39 @@ func TestFuncMap_JSON2Map(t *testing.T) {
 	data, err = fmJSON2Map(`{ hello: "world!" }`)
 	assert.Error(t, err)
 	assert.Empty(t, data)
+}
+
+func TestFuncMap_Prefix(t *testing.T) {
+	// test that returns the first 3 characters
+	assert.Equal(t, "foo", fmPrefix("foo/bar/baz", 3))
+
+	// test that returns the first 0 characters
+	assert.Equal(t, "", fmPrefix("foo/bar/baz", 0))
+
+	// test that returns the all characters if n is greater than length of
+	// specified string
+	assert.Equal(t, "foo/bar/baz", fmPrefix("foo/bar/baz", 12))
+}
+
+func TestFuncMap_HashSet(t *testing.T) {
+	// test that returns new instance fnHashSet data structure
+	s := fmNewHashSet()
+	assert.Equal(t, &fmHashSet{data: map[interface{}]bool{}}, s)
+
+	// test that returns true if value is stored in hashset
+	assert.True(t, s.Set("foo"))
+	assert.True(t, s.Set("bar"))
+
+	// test that returns false if value is already stored in hashset
+	assert.False(t, s.Set("foo"))
+	assert.False(t, s.Set("bar"))
+
+	// test that returns true if value has been removed from hashset
+	assert.True(t, s.Unset("foo"))
+
+	// test that returns false if value does not exists
+	assert.False(t, s.Unset("foo"))
+
+	// test that returns true if value is stored in hashset
+	assert.True(t, s.Set("foo"))
 }

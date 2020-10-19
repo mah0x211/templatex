@@ -82,6 +82,23 @@ func fmSub(c ...int) int {
 	return c[0] - 1
 }
 
+// JSON2Map is helper function for web user interface prototyping
+func fmJSON2Map(src string) (interface{}, error) {
+	var data interface{}
+	return data, json.Unmarshal([]byte(src), &data)
+}
+
+// extract first n characters from src
+func fmPrefix(src string, n int) string {
+	r := []rune(src)
+	if n <= 0 {
+		return ""
+	} else if n > len(r) {
+		return src
+	}
+	return string(r[:n])
+}
+
 /*
 	helper data structures
 */
@@ -111,23 +128,17 @@ func (s *fmHashSet) Unset(v interface{}) bool {
 	return false
 }
 
-// JSON2Map is helper function for web user interface prototyping
-func fmJSON2Map(src string) (interface{}, error) {
-	var data interface{}
-	return data, json.Unmarshal([]byte(src), &data)
-}
-
 func DefaultFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
-		"Keys":    fmKeys,
-		"ToSlice": fmToSlice,
-		"Sort":    fmSort,
-		"Equal":   fmEquals,
-		"Sub":     fmSub,
+		"Keys":     fmKeys,
+		"ToSlice":  fmToSlice,
+		"Sort":     fmSort,
+		"Equal":    fmEquals,
+		"Sub":      fmSub,
+		"JSON2Map": fmJSON2Map,
+		"Prefix":   fmPrefix,
 		// helper data structure
 		"NewHashSet": fmNewHashSet,
-		// helper function
-		"JSON2Map": fmJSON2Map,
 	}
 }
