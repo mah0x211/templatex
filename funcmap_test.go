@@ -167,6 +167,18 @@ func TestFuncMap_Prefix(t *testing.T) {
 	assert.Equal(t, "foo/bar/baz", fmPrefix("foo/bar/baz", 12))
 }
 
+func TestFuncMap_Suffix(t *testing.T) {
+	// test that returns the last 3 characters
+	assert.Equal(t, "baz", fmSuffix("foo/bar/baz", 3))
+
+	// test that returns the last 0 characters
+	assert.Equal(t, "", fmSuffix("foo/bar/baz", 0))
+
+	// test that returns the all characters if n is greater than length of
+	// specified string
+	assert.Equal(t, "foo/bar/baz", fmSuffix("foo/bar/baz", 12))
+}
+
 func TestFuncMap_HashSet(t *testing.T) {
 	// test that returns new instance fnHashSet data structure
 	s := fmNewHashSet()

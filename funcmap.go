@@ -99,6 +99,18 @@ func fmPrefix(src string, n int) string {
 	return string(r[:n])
 }
 
+// extract last n characters from src
+func fmSuffix(src string, n int) string {
+	r := []rune(src)
+	l := len(r)
+	if n <= 0 {
+		return ""
+	} else if n > l {
+		return src
+	}
+	return string(r[l-n:])
+}
+
 /*
 	helper data structures
 */
@@ -138,6 +150,7 @@ func DefaultFuncMap() map[string]interface{} {
 		"Sub":      fmSub,
 		"JSON2Map": fmJSON2Map,
 		"Prefix":   fmPrefix,
+		"Suffix":   fmSuffix,
 		// helper data structure
 		"NewHashSet": fmNewHashSet,
 	}
