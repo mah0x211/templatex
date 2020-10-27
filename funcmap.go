@@ -2,37 +2,38 @@ package templatex
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 )
 
-func indirectInterface(v reflect.Value) reflect.Value {
-	if v.Kind() != reflect.Interface {
-		return v
-	} else if v.IsNil() {
-		return reflect.Value{}
-	}
-	return v.Elem()
-}
+func fmKeys(v interface{}) ([]interface{}, error) {
+	ref := reflect.Indirect(reflect.ValueOf(v))
+	switch ref.Kind() {
+	case reflect.Slice:
+		n := ref.Len()
+		keys := make([]interface{}, n)
+		for i := 0; i < n; i++ {
+			keys[i] = i
+		}
+		return keys, nil
 
-func fmKeys(arg reflect.Value) []interface{} {
-	v := indirectInterface(arg)
-	vk := v.Kind()
-	if !v.IsValid() || vk != reflect.Map {
-		panic(&reflect.ValueError{
-			Method: "Keys",
-			Kind:   vk,
-		})
-	}
-	n := v.Len()
-	keys := make([]interface{}, 0, n)
-	iter := v.MapRange()
-	for iter.Next() {
-		k := iter.Key()
-		keys = append(keys, k.Interface())
+	case reflect.Map:
+		n := ref.Len()
+		keys := make([]interface{}, n)
+		iter := ref.MapRange()
+		i := 0
+		for iter.Next() {
+			keys[i] = iter.Key().Interface()
+			i++
+		}
+		return keys, nil
 	}
 
-	return keys
+	return nil, &reflect.ValueError{
+		Method: "Keys",
+		Kind:   ref.Kind(),
+	}
 }
 
 func fmToSlice(v ...interface{}) []interface{} {
@@ -66,9 +67,12 @@ func fmSort(arg []interface{}) []interface{} {
 	return arg
 }
 
-func fmEquals(x interface{}, y ...interface{}) bool {
-	for i, n := 0, len(y); i < n; i++ {
-		if reflect.DeepEqual(x, y[i]) {
+func fmEquals(x interface{}, v ...interface{}) bool {
+	xi := reflect.Indirect(reflect.ValueOf(x)).Interface()
+	for i, n := 0, len(v); i < n; i++ {
+		if reflect.DeepEqual(xi,
+			reflect.Indirect(reflect.ValueOf(v[i])).Interface(),
+		) {
 			return true
 		}
 	}
@@ -80,6 +84,52 @@ func fmSub(c ...int) int {
 		return c[0] - c[1]
 	}
 	return c[0] - 1
+}
+
+// JSON2Map is helper function for web user interface prototyping
+func fmJSON2Map(src string) (interface{}, error) {
+	var data interface{}
+	return data, json.Unmarshal([]byte(src), &data)
+}
+
+func fmToJSON(v interface{}, opts ...string) (string, error) {
+	indent := ""
+	switch len(opts) {
+	case 0:
+	case 1:
+		indent = opts[0]
+	default:
+		return "", fmt.Errorf("too many arguments: %#v", opts)
+	}
+
+	b, err := json.MarshalIndent(v, "", indent)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+// extract first n characters from src
+func fmPrefix(src string, n int) string {
+	r := []rune(src)
+	if n <= 0 {
+		return ""
+	} else if n > len(r) {
+		return src
+	}
+	return string(r[:n])
+}
+
+// extract last n characters from src
+func fmSuffix(src string, n int) string {
+	r := []rune(src)
+	l := len(r)
+	if n <= 0 {
+		return ""
+	} else if n > l {
+		return src
+	}
+	return string(r[l-n:])
 }
 
 /*
@@ -111,23 +161,19 @@ func (s *fmHashSet) Unset(v interface{}) bool {
 	return false
 }
 
-// JSON2Map is helper function for web user interface prototyping
-func fmJSON2Map(src string) (interface{}, error) {
-	var data interface{}
-	return data, json.Unmarshal([]byte(src), &data)
-}
-
 func DefaultFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
-		"Keys":    fmKeys,
-		"ToSlice": fmToSlice,
-		"Sort":    fmSort,
-		"Equal":   fmEquals,
-		"Sub":     fmSub,
+		"Keys":     fmKeys,
+		"ToSlice":  fmToSlice,
+		"Sort":     fmSort,
+		"Equal":    fmEquals,
+		"Sub":      fmSub,
+		"JSON2Map": fmJSON2Map,
+		"ToJSON":   fmToJSON,
+		"Prefix":   fmPrefix,
+		"Suffix":   fmSuffix,
 		// helper data structure
 		"NewHashSet": fmNewHashSet,
-		// helper function
-		"JSON2Map": fmJSON2Map,
 	}
 }
