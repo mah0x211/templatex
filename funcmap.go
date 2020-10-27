@@ -2,6 +2,7 @@ package templatex
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 )
@@ -88,6 +89,23 @@ func fmJSON2Map(src string) (interface{}, error) {
 	return data, json.Unmarshal([]byte(src), &data)
 }
 
+func fmToJSON(v interface{}, opts ...string) (string, error) {
+	indent := ""
+	switch len(opts) {
+	case 0:
+	case 1:
+		indent = opts[0]
+	default:
+		return "", fmt.Errorf("too many arguments: %#v", opts)
+	}
+
+	b, err := json.MarshalIndent(v, "", indent)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
 // extract first n characters from src
 func fmPrefix(src string, n int) string {
 	r := []rune(src)
@@ -149,6 +167,7 @@ func DefaultFuncMap() map[string]interface{} {
 		"Equal":    fmEquals,
 		"Sub":      fmSub,
 		"JSON2Map": fmJSON2Map,
+		"ToJSON":   fmToJSON,
 		"Prefix":   fmPrefix,
 		"Suffix":   fmSuffix,
 		// helper data structure

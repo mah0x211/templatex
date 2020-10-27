@@ -155,6 +155,41 @@ func TestFuncMap_JSON2Map(t *testing.T) {
 	assert.Empty(t, data)
 }
 
+func TestFuncMap_ToJSON(t *testing.T) {
+	// test that returns json string
+	for cmp, v := range map[string]interface{}{
+		"{\n\"hello\": \"world!\"\n}": map[string]interface{}{
+			"hello": "world!",
+		},
+		"[\n\"hello\",\n\"world!\"\n]": []interface{}{
+			"hello", "world!",
+		},
+		`"hello world!"`: "hello world!",
+		`12345`:          12345,
+		`true`:           true,
+		`false`:          false,
+	} {
+		s, err := fmToJSON(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assert.Equal(t, cmp, s)
+	}
+
+	// test that returns json string with indent
+	s, err := fmToJSON(map[string]interface{}{
+		"foo": "bar",
+	}, "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "{\n  \"foo\": \"bar\"\n}", s)
+
+	// test that returns error
+	_, err = fmToJSON(`"hello"`, "", "")
+	assert.Error(t, err)
+}
+
 func TestFuncMap_Prefix(t *testing.T) {
 	// test that returns the first 3 characters
 	assert.Equal(t, "foo", fmPrefix("foo/bar/baz", 3))
