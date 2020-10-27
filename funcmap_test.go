@@ -97,15 +97,34 @@ func TestFuncMap_Sort(t *testing.T) {
 }
 
 func TestFuncMap_Equals(t *testing.T) {
-	// test that returns true
-	assert.True(t, fmEquals(421, 421))
+	// test that returns true with string value
+	sv := "foo/bar/baz"
+	assert.True(t, fmEquals(sv, "foo/bar/baz"))
+	assert.True(t, fmEquals(&sv, "foo/bar/baz"))
+	nv := 421
+	assert.True(t, fmEquals(nv, 421))
+	assert.True(t, fmEquals(&nv, 421))
+	// by interface{}
+	var iv interface{} = sv
+	assert.True(t, fmEquals(iv, sv))
+	assert.True(t, fmEquals(iv, &sv))
+	iv = &sv
+	assert.True(t, fmEquals(iv, sv))
+	assert.True(t, fmEquals(iv, &sv))
+	iv = nv
+	assert.True(t, fmEquals(iv, nv))
+	assert.True(t, fmEquals(iv, &nv))
+	iv = &nv
+	assert.True(t, fmEquals(iv, nv))
+	assert.True(t, fmEquals(iv, &nv))
+
+	assert.True(t, fmEquals([]interface{}{"hello", "world"}, []interface{}{"hello", "world"}))
 	assert.True(t, fmEquals([]string{"hello", "world"}, []string{"hello", "world"}))
 	assert.True(t, fmEquals([]interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}, []interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}))
-
 	assert.True(t, fmEquals([]string{"world"}, 611, "abc", 0.5, []string{"world"}))
 
 	// test that returns false
