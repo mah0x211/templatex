@@ -7,33 +7,33 @@ import (
 	"sort"
 )
 
-func indirectInterface(v reflect.Value) reflect.Value {
-	if v.Kind() != reflect.Interface {
-		return v
-	} else if v.IsNil() {
-		return reflect.Value{}
-	}
-	return v.Elem()
-}
+func fmKeys(v interface{}) ([]interface{}, error) {
+	ref := reflect.Indirect(reflect.ValueOf(v))
+	switch ref.Kind() {
+	case reflect.Slice:
+		n := ref.Len()
+		keys := make([]interface{}, n)
+		for i := 0; i < n; i++ {
+			keys[i] = i
+		}
+		return keys, nil
 
-func fmKeys(arg reflect.Value) []interface{} {
-	v := indirectInterface(arg)
-	vk := v.Kind()
-	if !v.IsValid() || vk != reflect.Map {
-		panic(&reflect.ValueError{
-			Method: "Keys",
-			Kind:   vk,
-		})
-	}
-	n := v.Len()
-	keys := make([]interface{}, 0, n)
-	iter := v.MapRange()
-	for iter.Next() {
-		k := iter.Key()
-		keys = append(keys, k.Interface())
+	case reflect.Map:
+		n := ref.Len()
+		keys := make([]interface{}, n)
+		iter := ref.MapRange()
+		i := 0
+		for iter.Next() {
+			keys[i] = iter.Key().Interface()
+			i++
+		}
+		return keys, nil
 	}
 
-	return keys
+	return nil, &reflect.ValueError{
+		Method: "Keys",
+		Kind:   ref.Kind(),
+	}
 }
 
 func fmToSlice(v ...interface{}) []interface{} {

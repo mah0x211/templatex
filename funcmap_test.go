@@ -1,38 +1,71 @@
 package templatex
 
 import (
-	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFuncMap_Keys(t *testing.T) {
-	m := map[int]bool{
-		1:  true,
-		5:  true,
-		13: true,
-		6:  true,
-		4:  true,
-		9:  true,
-		21: true,
-		18: true,
-		26: true,
-	}
-
 	// test that returns keys of map
-	keys := fmKeys(reflect.ValueOf(m))
-	assert.Equal(t, len(m), len(keys))
-	for _, k := range keys {
-		ival, ok := k.(int)
-		assert.True(t, ok)
-		assert.True(t, m[ival])
+	v := map[interface{}]bool{
+		"c": true,
+		"e": true,
+		"g": true,
+		"a": true,
+		"d": true,
+		"f": true,
+		"b": true,
 	}
-
-	// test that panic occurs with non-map object
-	assert.Panics(t, func() {
-		fmKeys(reflect.ValueOf(1))
+	keys := []interface{}{}
+	for k := range v {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].(string) < keys[j].(string)
 	})
+
+	res, err := fmKeys(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].(string) < res[j].(string)
+	})
+	assert.Equal(t, keys, res)
+	// with pointer
+	res, err = fmKeys(&v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].(string) < res[j].(string)
+	})
+	assert.Equal(t, keys, res)
+
+	// test that returns indexes of slice
+	sv := []string{"c", "e", "g", "a", "d", "f", "b"}
+	keys = keys[:0]
+	for k := range sv {
+		keys = append(keys, k)
+	}
+	res, err = fmKeys(sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, keys, res)
+	// with pointer
+	res, err = fmKeys(&sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, keys, res)
+
+	// test that returns error if non map or slice object
+	keys, err = fmKeys(1)
+	assert.Nil(t, keys)
+	assert.Error(t, err)
 }
 
 func TestFuncMap_ToSlice(t *testing.T) {
