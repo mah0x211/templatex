@@ -329,6 +329,68 @@ func TestFuncMap_Suffix(t *testing.T) {
 	assert.Equal(t, "foo/bar/baz", Suffix("foo/bar/baz", 12))
 }
 
+func TestFuncMap_Slice(t *testing.T) {
+	// test that returns new instance of Slice
+	s := NewSlice()
+	assert.Equal(t, &Slice{}, s)
+
+	// test that returns new instance of Slice with arguments
+	s = NewSlice("foo", "bar", "baz")
+	assert.Equal(t, []interface{}{"foo", "bar", "baz"}, s.Value())
+
+	// test that returns length of slice
+	assert.Equal(t, 3, s.Len())
+
+	// test that returns head value of slice
+	assert.Equal(t, "foo", s.Head())
+
+	// test that returns tail value of slice
+	assert.Equal(t, "baz", s.Tail())
+
+	// test that append values
+	s.Append("quu", "qux")
+	assert.Equal(t, []interface{}{"foo", "bar", "baz", "quu", "qux"}, s.Value())
+
+	// test that clear value
+	s.Clear()
+	assert.Equal(t, 0, s.Len())
+	assert.Nil(t, s.Value())
+	assert.Nil(t, s.Head())
+	assert.Nil(t, s.Tail())
+
+	// test that push value
+	for i, v := range []string{"foo", "bar", "baz"} {
+		s.Push(v)
+		// test that returns pushed value
+		assert.Equal(t, v, s.Tail())
+		assert.Equal(t, i+1, s.Len())
+	}
+
+	// test that pop value
+	n := s.Len()
+	for _, v := range []string{"baz", "bar", "foo"} {
+		assert.Equal(t, v, s.Pop())
+		n--
+		assert.Equal(t, n, s.Len())
+	}
+	assert.Nil(t, s.Pop())
+
+	// test that unshift value
+	for i, v := range []string{"quu", "qux", "quux"} {
+		s.Unshift(v)
+		assert.Equal(t, v, s.Head())
+		assert.Equal(t, i+1, s.Len())
+	}
+
+	// test that unshift value
+	n = s.Len()
+	for i, v := range []string{"quux", "qux", "quu"} {
+		assert.Equal(t, v, s.Shift())
+		assert.Equal(t, n-(i+1), s.Len())
+	}
+	assert.Nil(t, s.Shift())
+}
+
 func TestFuncMap_HashSet(t *testing.T) {
 	// test that returns new instance fnHashSet data structure
 	s := NewHashSet()

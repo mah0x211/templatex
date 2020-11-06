@@ -160,6 +160,72 @@ func Suffix(src string, n int) string {
 /*
 	helper data structures
 */
+type Slice struct {
+	value []interface{}
+}
+
+func NewSlice(v ...interface{}) *Slice {
+	return &Slice{
+		value: v,
+	}
+}
+
+func (s *Slice) Clear() {
+	s.value = nil
+}
+
+func (s *Slice) Len() int {
+	return len(s.value)
+}
+
+func (s *Slice) Value() []interface{} {
+	return s.value
+}
+
+func (s *Slice) Head() interface{} {
+	if len(s.value) > 0 {
+		return s.value[0]
+	}
+	return nil
+}
+
+func (s *Slice) Tail() interface{} {
+	if n := len(s.value); n > 0 {
+		return s.value[n-1]
+	}
+	return nil
+}
+
+func (s *Slice) Append(v ...interface{}) {
+	s.value = append(s.value, v...)
+}
+
+func (s *Slice) Push(v interface{}) {
+	s.value = append(s.value, v)
+}
+
+func (s *Slice) Pop() interface{} {
+	if n := len(s.value); n > 0 {
+		v := s.value[n-1]
+		s.value = s.value[:n-1]
+		return v
+	}
+	return nil
+}
+
+func (s *Slice) Unshift(v interface{}) {
+	s.value = append([]interface{}{v}, s.value...)
+}
+
+func (s *Slice) Shift() interface{} {
+	if len(s.value) > 0 {
+		v := s.value[0]
+		s.value = s.value[1:]
+		return v
+	}
+	return nil
+}
+
 type HashSet struct {
 	data map[interface{}]bool
 }
@@ -202,6 +268,7 @@ func FuncMap() map[string]interface{} {
 		"Prefix":    Prefix,
 		"Suffix":    Suffix,
 		// helper data structure
+		"NewSlice":   NewSlice,
 		"NewHashSet": NewHashSet,
 	}
 }
