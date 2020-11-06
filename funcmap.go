@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+func fmNot(args ...interface{}) bool {
+	for _, a := range args {
+		v := reflect.ValueOf(a)
+		if v.IsValid() && !v.IsZero() {
+			return false
+		}
+	}
+	return true
+}
+
 func fmHasPrefix(s, prefix string) bool {
 	return strings.HasPrefix(s, prefix)
 }
@@ -179,6 +189,7 @@ func (s *fmHashSet) Unset(v interface{}) bool {
 func DefaultFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
+		"Not":       fmNot,
 		"HasPrefix": fmHasPrefix,
 		"HasSuffix": fmHasSuffix,
 		"Keys":      fmKeys,

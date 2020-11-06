@@ -7,6 +7,52 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFuncMap_Not(t *testing.T) {
+	// test that returns true
+	var (
+		boolv      bool
+		intv       int
+		floatv     float32
+		complexv   complex64
+		arrayv     [1]int
+		chanv      chan int
+		funcv      func()
+		interfacev interface{}
+		mapv       map[int]int
+		ptrv       *int
+		slicev     []string
+		strv       string
+		structv    struct{ foo int }
+	)
+	assert.True(t, fmNot(
+		boolv, intv, floatv, complexv,
+		arrayv, chanv, funcv, interfacev,
+		mapv, ptrv, slicev, strv, structv,
+	))
+
+	// test that returns false
+	boolv = true
+	intv = -1
+	floatv = -0.1
+	complexv = 1.1
+	arrayv[0] = 1
+	chanv = make(chan int, 0)
+	funcv = func() {}
+	interfacev = 1
+	mapv = map[int]int{}
+	ptrv = &intv
+	slicev = make([]string, 0)
+	strv = "foo"
+	structv.foo = 1
+	for _, v := range []interface{}{
+		boolv, intv, floatv, complexv,
+		arrayv, chanv, funcv, interfacev,
+		mapv, ptrv, slicev, strv, structv,
+	} {
+		assert.False(t, fmNot(v))
+	}
+}
+
 func TestFuncMap_HasPrefix(t *testing.T) {
 	// test that returns true
 	assert.True(t, fmHasPrefix("foo-bar", "foo-b"))
