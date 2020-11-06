@@ -1,13 +1,66 @@
 package builtins
 
 import (
+	"reflect"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFuncMap_Not(t *testing.T) {
+func equalFunc(t *testing.T, exp, act interface{}) bool {
+	ef := reflect.ValueOf(exp)
+	if ef.Kind() != reflect.Func {
+		t.Fatalf("expected value is not function")
+	}
+
+	af := reflect.ValueOf(act)
+	if af.Kind() != reflect.Func {
+		t.Fatalf("actual value is not function")
+	}
+
+	return ef.Pointer() == af.Pointer()
+}
+
+func Test_FuncMap(t *testing.T) {
+	// test that returns built-in funcmap
+	for k, v := range FuncMap() {
+		switch k {
+		case "Not":
+			equalFunc(t, v, Not)
+		case "HasPrefix":
+			equalFunc(t, v, HasPrefix)
+		case "HasSuffix":
+			equalFunc(t, v, HasSuffix)
+		case "Keys":
+			equalFunc(t, v, Keys)
+		case "ToSlice":
+			equalFunc(t, v, ToSlice)
+		case "Sort":
+			equalFunc(t, v, Sort)
+		case "Equals":
+			equalFunc(t, v, Equals)
+		case "Sub":
+			equalFunc(t, v, Sub)
+		case "JSON2Map":
+			equalFunc(t, v, JSON2Map)
+		case "ToJSON":
+			equalFunc(t, v, ToJSON)
+		case "Prefix":
+			equalFunc(t, v, Prefix)
+		case "Suffix":
+			equalFunc(t, v, Suffix)
+		case "NewSlice":
+			equalFunc(t, v, NewSlice)
+		case "NewHashSet":
+			equalFunc(t, v, NewHashSet)
+		default:
+			t.Fatalf("unknown built-in function has been exported: %q", k)
+		}
+	}
+}
+
+func Test_Not(t *testing.T) {
 	// test that returns true
 	var (
 		boolv      bool
@@ -53,7 +106,7 @@ func TestFuncMap_Not(t *testing.T) {
 	}
 }
 
-func TestFuncMap_HasPrefix(t *testing.T) {
+func Test_HasPrefix(t *testing.T) {
 	// test that returns true
 	assert.True(t, HasPrefix("foo-bar", "foo-b"))
 
@@ -61,7 +114,7 @@ func TestFuncMap_HasPrefix(t *testing.T) {
 	assert.False(t, HasPrefix("foo-bar", "bar"))
 }
 
-func TestFuncMap_HasSuffix(t *testing.T) {
+func Test_HasSuffix(t *testing.T) {
 	// test that returns true
 	assert.True(t, HasSuffix("foo-bar", "o-bar"))
 
@@ -69,7 +122,7 @@ func TestFuncMap_HasSuffix(t *testing.T) {
 	assert.False(t, HasSuffix("foo-bar", "foo"))
 }
 
-func TestFuncMap_Keys(t *testing.T) {
+func Test_Keys(t *testing.T) {
 	// test that returns keys of map
 	v := map[interface{}]bool{
 		"c": true,
@@ -130,7 +183,7 @@ func TestFuncMap_Keys(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFuncMap_ToSlice(t *testing.T) {
+func Test_ToSlice(t *testing.T) {
 	args := []interface{}{
 		1,
 		nil,
@@ -147,7 +200,7 @@ func TestFuncMap_ToSlice(t *testing.T) {
 	}
 }
 
-func TestFuncMap_Sort(t *testing.T) {
+func Test_Sort(t *testing.T) {
 	// test that returns sorted slice with bool arguments
 	assert.Equal(t, []interface{}{
 		true, false, true, false, true, false,
@@ -191,7 +244,7 @@ func TestFuncMap_Sort(t *testing.T) {
 	}))
 }
 
-func TestFuncMap_Equals(t *testing.T) {
+func Test_Equals(t *testing.T) {
 	// test that returns true with string value
 	assert.True(t, Equals(nil, nil))
 	sv := "foo/bar/baz"
@@ -231,7 +284,7 @@ func TestFuncMap_Equals(t *testing.T) {
 
 }
 
-func TestFuncMap_Sub(t *testing.T) {
+func Test_Sub(t *testing.T) {
 	// test that returns a value decremented
 	assert.Equal(t, 4, Sub(5))
 
@@ -239,7 +292,7 @@ func TestFuncMap_Sub(t *testing.T) {
 	assert.Equal(t, 3, Sub(5, 2, 9, 3))
 }
 
-func TestFuncMap_JSON2Map(t *testing.T) {
+func Test_JSON2Map(t *testing.T) {
 	// test that parse string as object
 	data, err := JSON2Map(`{ "hello": "world!" }`)
 	assert.NoError(t, err)
@@ -270,7 +323,7 @@ func TestFuncMap_JSON2Map(t *testing.T) {
 	assert.Empty(t, data)
 }
 
-func TestFuncMap_ToJSON(t *testing.T) {
+func Test_ToJSON(t *testing.T) {
 	// test that returns json string
 	for cmp, v := range map[string]interface{}{
 		"{\n\"hello\": \"world!\"\n}": map[string]interface{}{
@@ -305,7 +358,7 @@ func TestFuncMap_ToJSON(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFuncMap_Prefix(t *testing.T) {
+func Test_Prefix(t *testing.T) {
 	// test that returns the first 3 characters
 	assert.Equal(t, "foo", Prefix("foo/bar/baz", 3))
 
@@ -317,7 +370,7 @@ func TestFuncMap_Prefix(t *testing.T) {
 	assert.Equal(t, "foo/bar/baz", Prefix("foo/bar/baz", 12))
 }
 
-func TestFuncMap_Suffix(t *testing.T) {
+func Test_Suffix(t *testing.T) {
 	// test that returns the last 3 characters
 	assert.Equal(t, "baz", Suffix("foo/bar/baz", 3))
 
@@ -329,7 +382,7 @@ func TestFuncMap_Suffix(t *testing.T) {
 	assert.Equal(t, "foo/bar/baz", Suffix("foo/bar/baz", 12))
 }
 
-func TestFuncMap_Slice(t *testing.T) {
+func Test_Slice(t *testing.T) {
 	// test that returns new instance of Slice
 	s := NewSlice()
 	assert.Equal(t, &Slice{}, s)
@@ -391,7 +444,7 @@ func TestFuncMap_Slice(t *testing.T) {
 	assert.Nil(t, s.Shift())
 }
 
-func TestFuncMap_HashSet(t *testing.T) {
+func Test_HashSet(t *testing.T) {
 	// test that returns new instance fnHashSet data structure
 	s := NewHashSet()
 	assert.Equal(t, &HashSet{data: map[interface{}]bool{}}, s)
