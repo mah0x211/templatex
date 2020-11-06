@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/mah0x211/templatex/builtins"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,8 +36,8 @@ func TestNew(t *testing.T) {
 	// test that readfn is equal to DefaultReadFunc
 	assert.Equal(t, fmt.Sprintf("%p", DefaultReadFunc), fmt.Sprintf("%p", tpl.readfn))
 
-	// test that funcs is equal to returns of DefaultFuncMap()
-	assert.Equal(t, fmt.Sprintf("%#v", DefaultFuncMap()), fmt.Sprintf("%#v", tpl.funcs))
+	// test that funcs is equal to returns of builtins.FuncMap()
+	assert.Equal(t, fmt.Sprintf("%#v", builtins.FuncMap()), fmt.Sprintf("%#v", tpl.funcs))
 }
 
 func TestNewEx(t *testing.T) {
@@ -71,7 +72,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		return nil, syscall.ENOENT
 	}
 	b := bytes.NewBuffer(nil)
-	create := func() *Runtime { return NewEx(readfn, NewNopCache(), DefaultFuncMap()) }
+	create := func() *Runtime { return NewEx(readfn, NewNopCache(), builtins.FuncMap()) }
 
 	// test that return syscall.ENOENT error
 	err := create().RenderHTML(b, "index.html", map[string]interface{}{
@@ -256,7 +257,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"/root/dir/with_layout2.html": `{{define "content"}}hello 2 {{.World}}{{end}}{{layout "@layout.html"}}`,
 	}
 	cache := NewMapCache()
-	rt := NewEx(readfn, cache, DefaultFuncMap())
+	rt := NewEx(readfn, cache, builtins.FuncMap())
 	err = rt.RenderHTML(b, "with_layout.html", map[string]interface{}{
 		"World": "world!",
 	})
@@ -309,7 +310,7 @@ func TestRuntime_RenderText(t *testing.T) {
 	}
 	b := bytes.NewBuffer(nil)
 	cache := NewMapCache()
-	rt := NewEx(readfn, cache, DefaultFuncMap())
+	rt := NewEx(readfn, cache, builtins.FuncMap())
 
 	// test that render the file formatted as text/template
 	assert.NoError(t, rt.RenderText(b, "with_include.html", map[string]interface{}{

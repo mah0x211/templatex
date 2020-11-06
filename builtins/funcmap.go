@@ -1,4 +1,4 @@
-package templatex
+package builtins
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func fmNot(args ...interface{}) bool {
+func Not(args ...interface{}) bool {
 	for _, a := range args {
 		v := reflect.ValueOf(a)
 		if v.IsValid() && !v.IsZero() {
@@ -18,15 +18,15 @@ func fmNot(args ...interface{}) bool {
 	return true
 }
 
-func fmHasPrefix(s, prefix string) bool {
+func HasPrefix(s, prefix string) bool {
 	return strings.HasPrefix(s, prefix)
 }
 
-func fmHasSuffix(s, suffix string) bool {
+func HasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
 
-func fmKeys(v interface{}) ([]interface{}, error) {
+func Keys(v interface{}) ([]interface{}, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
 	switch ref.Kind() {
 	case reflect.Slice:
@@ -55,11 +55,11 @@ func fmKeys(v interface{}) ([]interface{}, error) {
 	}
 }
 
-func fmToSlice(v ...interface{}) []interface{} {
+func ToSlice(v ...interface{}) []interface{} {
 	return v
 }
 
-func fmSort(arg []interface{}) []interface{} {
+func Sort(arg []interface{}) []interface{} {
 	sort.Slice(arg, func(i, j int) bool {
 		iv := reflect.ValueOf(arg[i])
 		jv := reflect.ValueOf(arg[j])
@@ -86,7 +86,7 @@ func fmSort(arg []interface{}) []interface{} {
 	return arg
 }
 
-func fmEquals(x interface{}, v ...interface{}) bool {
+func Equals(x interface{}, v ...interface{}) bool {
 	var xi interface{}
 	if ref := reflect.Indirect(reflect.ValueOf(x)); ref.IsValid() {
 		xi = ref.Interface()
@@ -104,7 +104,7 @@ func fmEquals(x interface{}, v ...interface{}) bool {
 	return false
 }
 
-func fmSub(c ...int) int {
+func Sub(c ...int) int {
 	if len(c) > 1 {
 		return c[0] - c[1]
 	}
@@ -112,12 +112,12 @@ func fmSub(c ...int) int {
 }
 
 // JSON2Map is helper function for web user interface prototyping
-func fmJSON2Map(src string) (interface{}, error) {
+func JSON2Map(src string) (interface{}, error) {
 	var data interface{}
 	return data, json.Unmarshal([]byte(src), &data)
 }
 
-func fmToJSON(v interface{}, opts ...string) (string, error) {
+func ToJSON(v interface{}, opts ...string) (string, error) {
 	indent := ""
 	switch len(opts) {
 	case 0:
@@ -135,7 +135,7 @@ func fmToJSON(v interface{}, opts ...string) (string, error) {
 }
 
 // extract first n characters from src
-func fmPrefix(src string, n int) string {
+func Prefix(src string, n int) string {
 	r := []rune(src)
 	if n <= 0 {
 		return ""
@@ -146,7 +146,7 @@ func fmPrefix(src string, n int) string {
 }
 
 // extract last n characters from src
-func fmSuffix(src string, n int) string {
+func Suffix(src string, n int) string {
 	r := []rune(src)
 	l := len(r)
 	if n <= 0 {
@@ -160,17 +160,17 @@ func fmSuffix(src string, n int) string {
 /*
 	helper data structures
 */
-type fmHashSet struct {
+type HashSet struct {
 	data map[interface{}]bool
 }
 
-func fmNewHashSet() *fmHashSet {
-	return &fmHashSet{
+func NewHashSet() *HashSet {
+	return &HashSet{
 		data: map[interface{}]bool{},
 	}
 }
 
-func (s *fmHashSet) Set(v interface{}) bool {
+func (s *HashSet) Set(v interface{}) bool {
 	if _, exists := s.data[v]; exists {
 		return false
 	}
@@ -178,7 +178,7 @@ func (s *fmHashSet) Set(v interface{}) bool {
 	return true
 }
 
-func (s *fmHashSet) Unset(v interface{}) bool {
+func (s *HashSet) Unset(v interface{}) bool {
 	if _, exists := s.data[v]; exists {
 		delete(s.data, v)
 		return true
@@ -186,22 +186,22 @@ func (s *fmHashSet) Unset(v interface{}) bool {
 	return false
 }
 
-func DefaultFuncMap() map[string]interface{} {
+func FuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
-		"Not":       fmNot,
-		"HasPrefix": fmHasPrefix,
-		"HasSuffix": fmHasSuffix,
-		"Keys":      fmKeys,
-		"ToSlice":   fmToSlice,
-		"Sort":      fmSort,
-		"Equals":    fmEquals,
-		"Sub":       fmSub,
-		"JSON2Map":  fmJSON2Map,
-		"ToJSON":    fmToJSON,
-		"Prefix":    fmPrefix,
-		"Suffix":    fmSuffix,
+		"Not":       Not,
+		"HasPrefix": HasPrefix,
+		"HasSuffix": HasSuffix,
+		"Keys":      Keys,
+		"ToSlice":   ToSlice,
+		"Sort":      Sort,
+		"Equals":    Equals,
+		"Sub":       Sub,
+		"JSON2Map":  JSON2Map,
+		"ToJSON":    ToJSON,
+		"Prefix":    Prefix,
+		"Suffix":    Suffix,
 		// helper data structure
-		"NewHashSet": fmNewHashSet,
+		"NewHashSet": NewHashSet,
 	}
 }

@@ -1,4 +1,4 @@
-package templatex
+package builtins
 
 import (
 	"sort"
@@ -24,7 +24,7 @@ func TestFuncMap_Not(t *testing.T) {
 		strv       string
 		structv    struct{ foo int }
 	)
-	assert.True(t, fmNot(
+	assert.True(t, Not(
 		boolv, intv, floatv, complexv,
 		arrayv, chanv, funcv, interfacev,
 		mapv, ptrv, slicev, strv, structv,
@@ -49,24 +49,24 @@ func TestFuncMap_Not(t *testing.T) {
 		arrayv, chanv, funcv, interfacev,
 		mapv, ptrv, slicev, strv, structv,
 	} {
-		assert.False(t, fmNot(v))
+		assert.False(t, Not(v))
 	}
 }
 
 func TestFuncMap_HasPrefix(t *testing.T) {
 	// test that returns true
-	assert.True(t, fmHasPrefix("foo-bar", "foo-b"))
+	assert.True(t, HasPrefix("foo-bar", "foo-b"))
 
 	// test that returns false
-	assert.False(t, fmHasPrefix("foo-bar", "bar"))
+	assert.False(t, HasPrefix("foo-bar", "bar"))
 }
 
 func TestFuncMap_HasSuffix(t *testing.T) {
 	// test that returns true
-	assert.True(t, fmHasSuffix("foo-bar", "o-bar"))
+	assert.True(t, HasSuffix("foo-bar", "o-bar"))
 
 	// test that returns false
-	assert.False(t, fmHasSuffix("foo-bar", "foo"))
+	assert.False(t, HasSuffix("foo-bar", "foo"))
 }
 
 func TestFuncMap_Keys(t *testing.T) {
@@ -88,7 +88,7 @@ func TestFuncMap_Keys(t *testing.T) {
 		return keys[i].(string) < keys[j].(string)
 	})
 
-	res, err := fmKeys(v)
+	res, err := Keys(v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestFuncMap_Keys(t *testing.T) {
 	})
 	assert.Equal(t, keys, res)
 	// with pointer
-	res, err = fmKeys(&v)
+	res, err = Keys(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,20 +112,20 @@ func TestFuncMap_Keys(t *testing.T) {
 	for k := range sv {
 		keys = append(keys, k)
 	}
-	res, err = fmKeys(sv)
+	res, err = Keys(sv)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, keys, res)
 	// with pointer
-	res, err = fmKeys(&sv)
+	res, err = Keys(&sv)
 	if err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, keys, res)
 
 	// test that returns error if argument is not map or slice argument
-	keys, err = fmKeys(1)
+	keys, err = Keys(1)
 	assert.Nil(t, keys)
 	assert.Error(t, err)
 }
@@ -142,7 +142,7 @@ func TestFuncMap_ToSlice(t *testing.T) {
 	}
 
 	// test that returns slice from arguments
-	for i, v := range fmToSlice(args...) {
+	for i, v := range ToSlice(args...) {
 		assert.Equal(t, args[i], v)
 	}
 }
@@ -151,121 +151,121 @@ func TestFuncMap_Sort(t *testing.T) {
 	// test that returns sorted slice with bool arguments
 	assert.Equal(t, []interface{}{
 		true, false, true, false, true, false,
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		true, false, true, false, true, false,
 	}))
 
 	// test that returns sorted slice with integer arguments
 	assert.Equal(t, []interface{}{
 		1, 5, 9, 13, 18, 26, 32,
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		1, 13, 5, 32, 9, 18, 26,
 	}))
 
 	// test that returns sorted slice with unsigned integer arguments
 	assert.Equal(t, []interface{}{
 		uint(1), uint(5), uint(9), uint(13), uint(18), uint(26), uint(32),
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		uint(1), uint(13), uint(5), uint(32), uint(9), uint(18), uint(26),
 	}))
 
 	// test that returns sorted slice with float arguments
 	assert.Equal(t, []interface{}{
 		0.1, 5.0, 9.3, 13.91, 18.01, 26.43, 32.98,
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		0.1, 13.91, 5.0, 32.98, 9.3, 18.01, 26.43,
 	}))
 
 	// test that returns sorted slice with string
 	assert.Equal(t, []interface{}{
 		"apple", "banana", "cherry", "grape", "pineapple",
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		"grape", "pineapple", "banana", "apple", "cherry",
 	}))
 
 	// test that cannot sort slice with various types of values
 	assert.Equal(t, []interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
-	}, fmSort([]interface{}{
+	}, Sort([]interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}))
 }
 
 func TestFuncMap_Equals(t *testing.T) {
 	// test that returns true with string value
-	assert.True(t, fmEquals(nil, nil))
+	assert.True(t, Equals(nil, nil))
 	sv := "foo/bar/baz"
-	assert.True(t, fmEquals(sv, "foo/bar/baz"))
-	assert.True(t, fmEquals(&sv, "foo/bar/baz"))
+	assert.True(t, Equals(sv, "foo/bar/baz"))
+	assert.True(t, Equals(&sv, "foo/bar/baz"))
 	nv := 421
-	assert.True(t, fmEquals(nv, 421))
-	assert.True(t, fmEquals(&nv, 421))
+	assert.True(t, Equals(nv, 421))
+	assert.True(t, Equals(&nv, 421))
 	// by interface{}
 	var iv interface{} = sv
-	assert.True(t, fmEquals(iv, sv))
-	assert.True(t, fmEquals(iv, &sv))
+	assert.True(t, Equals(iv, sv))
+	assert.True(t, Equals(iv, &sv))
 	iv = &sv
-	assert.True(t, fmEquals(iv, sv))
-	assert.True(t, fmEquals(iv, &sv))
+	assert.True(t, Equals(iv, sv))
+	assert.True(t, Equals(iv, &sv))
 	iv = nv
-	assert.True(t, fmEquals(iv, nv))
-	assert.True(t, fmEquals(iv, &nv))
+	assert.True(t, Equals(iv, nv))
+	assert.True(t, Equals(iv, &nv))
 	iv = &nv
-	assert.True(t, fmEquals(iv, nv))
-	assert.True(t, fmEquals(iv, &nv))
+	assert.True(t, Equals(iv, nv))
+	assert.True(t, Equals(iv, &nv))
 
-	assert.True(t, fmEquals([]interface{}{"hello", "world"}, []interface{}{"hello", "world"}))
-	assert.True(t, fmEquals([]string{"hello", "world"}, []string{"hello", "world"}))
-	assert.True(t, fmEquals([]interface{}{
+	assert.True(t, Equals([]interface{}{"hello", "world"}, []interface{}{"hello", "world"}))
+	assert.True(t, Equals([]string{"hello", "world"}, []string{"hello", "world"}))
+	assert.True(t, Equals([]interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}, []interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}))
-	assert.True(t, fmEquals([]string{"world"}, 611, "abc", 0.5, []string{"world"}))
+	assert.True(t, Equals([]string{"world"}, 611, "abc", 0.5, []string{"world"}))
 
 	// test that returns false
-	assert.False(t, fmEquals(421, int64(421)))
-	assert.False(t, fmEquals([]string{"world", "hello"}, []string{"hello", "world"}))
+	assert.False(t, Equals(421, int64(421)))
+	assert.False(t, Equals([]string{"world", "hello"}, []string{"hello", "world"}))
 
-	assert.False(t, fmEquals([]string{"world"}, 611, "abc", 0.5, []string{"hello"}))
+	assert.False(t, Equals([]string{"world"}, 611, "abc", 0.5, []string{"hello"}))
 
 }
 
 func TestFuncMap_Sub(t *testing.T) {
 	// test that returns a value decremented
-	assert.Equal(t, 4, fmSub(5))
+	assert.Equal(t, 4, Sub(5))
 
 	// test that returns a value subtracted by second argument
-	assert.Equal(t, 3, fmSub(5, 2, 9, 3))
+	assert.Equal(t, 3, Sub(5, 2, 9, 3))
 }
 
 func TestFuncMap_JSON2Map(t *testing.T) {
 	// test that parse string as object
-	data, err := fmJSON2Map(`{ "hello": "world!" }`)
+	data, err := JSON2Map(`{ "hello": "world!" }`)
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"hello": "world!",
 	}, data)
 
 	// test that parse string as array
-	data, err = fmJSON2Map(`[ "hello", "world!" ]`)
+	data, err = JSON2Map(`[ "hello", "world!" ]`)
 	assert.NoError(t, err)
 	assert.Equal(t, []interface{}{
 		"hello", "world!",
 	}, data)
 
 	// test that parse string as string
-	data, err = fmJSON2Map(`"hello world!"`)
+	data, err = JSON2Map(`"hello world!"`)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world!", data)
 
 	// test that parse string as number (float64)
-	data, err = fmJSON2Map(`12345`)
+	data, err = JSON2Map(`12345`)
 	assert.NoError(t, err)
 	assert.Equal(t, float64(12345), data)
 
 	// test that returns parse error
-	data, err = fmJSON2Map(`{ hello: "world!" }`)
+	data, err = JSON2Map(`{ hello: "world!" }`)
 	assert.Error(t, err)
 	assert.Empty(t, data)
 }
@@ -284,7 +284,7 @@ func TestFuncMap_ToJSON(t *testing.T) {
 		`true`:           true,
 		`false`:          false,
 	} {
-		s, err := fmToJSON(v)
+		s, err := ToJSON(v)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -292,7 +292,7 @@ func TestFuncMap_ToJSON(t *testing.T) {
 	}
 
 	// test that returns json string with indent
-	s, err := fmToJSON(map[string]interface{}{
+	s, err := ToJSON(map[string]interface{}{
 		"foo": "bar",
 	}, "  ")
 	if err != nil {
@@ -301,38 +301,38 @@ func TestFuncMap_ToJSON(t *testing.T) {
 	assert.Equal(t, "{\n  \"foo\": \"bar\"\n}", s)
 
 	// test that returns error
-	_, err = fmToJSON(`"hello"`, "", "")
+	_, err = ToJSON(`"hello"`, "", "")
 	assert.Error(t, err)
 }
 
 func TestFuncMap_Prefix(t *testing.T) {
 	// test that returns the first 3 characters
-	assert.Equal(t, "foo", fmPrefix("foo/bar/baz", 3))
+	assert.Equal(t, "foo", Prefix("foo/bar/baz", 3))
 
 	// test that returns the first 0 characters
-	assert.Equal(t, "", fmPrefix("foo/bar/baz", 0))
+	assert.Equal(t, "", Prefix("foo/bar/baz", 0))
 
 	// test that returns the all characters if n is greater than length of
 	// specified string
-	assert.Equal(t, "foo/bar/baz", fmPrefix("foo/bar/baz", 12))
+	assert.Equal(t, "foo/bar/baz", Prefix("foo/bar/baz", 12))
 }
 
 func TestFuncMap_Suffix(t *testing.T) {
 	// test that returns the last 3 characters
-	assert.Equal(t, "baz", fmSuffix("foo/bar/baz", 3))
+	assert.Equal(t, "baz", Suffix("foo/bar/baz", 3))
 
 	// test that returns the last 0 characters
-	assert.Equal(t, "", fmSuffix("foo/bar/baz", 0))
+	assert.Equal(t, "", Suffix("foo/bar/baz", 0))
 
 	// test that returns the all characters if n is greater than length of
 	// specified string
-	assert.Equal(t, "foo/bar/baz", fmSuffix("foo/bar/baz", 12))
+	assert.Equal(t, "foo/bar/baz", Suffix("foo/bar/baz", 12))
 }
 
 func TestFuncMap_HashSet(t *testing.T) {
 	// test that returns new instance fnHashSet data structure
-	s := fmNewHashSet()
-	assert.Equal(t, &fmHashSet{data: map[interface{}]bool{}}, s)
+	s := NewHashSet()
+	assert.Equal(t, &HashSet{data: map[interface{}]bool{}}, s)
 
 	// test that returns true if value is stored in hashset
 	assert.True(t, s.Set("foo"))
