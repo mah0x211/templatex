@@ -173,7 +173,7 @@ func DefaultFuncMap() map[string]interface{} {
 		"Keys":     fmKeys,
 		"ToSlice":  fmToSlice,
 		"Sort":     fmSort,
-		"Equal":    fmEquals,
+		"Equals":   fmEquals,
 		"Sub":      fmSub,
 		"JSON2Map": fmJSON2Map,
 		"ToJSON":   fmToJSON,
