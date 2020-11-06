@@ -15,6 +15,14 @@ func TestFuncMap_HasPrefix(t *testing.T) {
 	assert.False(t, fmHasPrefix("foo-bar", "bar"))
 }
 
+func TestFuncMap_HasSuffix(t *testing.T) {
+	// test that returns true
+	assert.True(t, fmHasSuffix("foo-bar", "o-bar"))
+
+	// test that returns false
+	assert.False(t, fmHasSuffix("foo-bar", "foo"))
+}
+
 func TestFuncMap_Keys(t *testing.T) {
 	// test that returns keys of map
 	v := map[interface{}]bool{

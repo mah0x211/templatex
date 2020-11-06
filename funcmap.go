@@ -12,6 +12,10 @@ func fmHasPrefix(s, prefix string) bool {
 	return strings.HasPrefix(s, prefix)
 }
 
+func fmHasSuffix(s, suffix string) bool {
+	return strings.HasSuffix(s, suffix)
+}
+
 func fmKeys(v interface{}) ([]interface{}, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
 	switch ref.Kind() {
@@ -176,6 +180,7 @@ func DefaultFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
 		"HasPrefix": fmHasPrefix,
+		"HasSuffix": fmHasSuffix,
 		"Keys":      fmKeys,
 		"ToSlice":   fmToSlice,
 		"Sort":      fmSort,
