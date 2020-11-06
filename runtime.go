@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+
+	"github.com/mah0x211/templatex/builtins"
 )
 
 type ReadFunc func(pathname string) ([]byte, error)
@@ -39,7 +41,7 @@ func NewEx(readfn ReadFunc, cache Cache, funcs map[string]interface{}) *Runtime 
 }
 
 func New() *Runtime {
-	return NewEx(DefaultReadFunc, NewNopCache(), DefaultFuncMap())
+	return NewEx(DefaultReadFunc, NewNopCache(), builtins.FuncMap())
 }
 
 // match　{{(template|layout) "name" .}}
