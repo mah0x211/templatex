@@ -68,11 +68,17 @@ func fmSort(arg []interface{}) []interface{} {
 }
 
 func fmEquals(x interface{}, v ...interface{}) bool {
-	xi := reflect.Indirect(reflect.ValueOf(x)).Interface()
+	var xi interface{}
+	if ref := reflect.Indirect(reflect.ValueOf(x)); ref.IsValid() {
+		xi = ref.Interface()
+	}
+
 	for i, n := 0, len(v); i < n; i++ {
-		if reflect.DeepEqual(xi,
-			reflect.Indirect(reflect.ValueOf(v[i])).Interface(),
-		) {
+		var vi interface{}
+		if ref := reflect.Indirect(reflect.ValueOf(v[i])); ref.IsValid() {
+			vi = ref.Interface()
+		}
+		if reflect.DeepEqual(xi, vi) {
 			return true
 		}
 	}

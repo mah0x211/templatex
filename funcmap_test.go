@@ -62,7 +62,7 @@ func TestFuncMap_Keys(t *testing.T) {
 	}
 	assert.Equal(t, keys, res)
 
-	// test that returns error if non map or slice object
+	// test that returns error if argument is not map or slice argument
 	keys, err = fmKeys(1)
 	assert.Nil(t, keys)
 	assert.Error(t, err)
@@ -131,6 +131,7 @@ func TestFuncMap_Sort(t *testing.T) {
 
 func TestFuncMap_Equals(t *testing.T) {
 	// test that returns true with string value
+	assert.True(t, fmEquals(nil, nil))
 	sv := "foo/bar/baz"
 	assert.True(t, fmEquals(sv, "foo/bar/baz"))
 	assert.True(t, fmEquals(&sv, "foo/bar/baz"))
