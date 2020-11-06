@@ -7,6 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestFuncMap_HasPrefix(t *testing.T) {
+	// test that returns true
+	assert.True(t, fmHasPrefix("foo-bar", "foo-b"))
+
+	// test that returns false
+	assert.False(t, fmHasPrefix("foo-bar", "bar"))
+}
+
 func TestFuncMap_Keys(t *testing.T) {
 	// test that returns keys of map
 	v := map[interface{}]bool{

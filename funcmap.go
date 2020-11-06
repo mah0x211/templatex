@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 )
+
+func fmHasPrefix(s, prefix string) bool {
+	return strings.HasPrefix(s, prefix)
+}
 
 func fmKeys(v interface{}) ([]interface{}, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
@@ -170,15 +175,16 @@ func (s *fmHashSet) Unset(v interface{}) bool {
 func DefaultFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		// functions
-		"Keys":     fmKeys,
-		"ToSlice":  fmToSlice,
-		"Sort":     fmSort,
-		"Equals":   fmEquals,
-		"Sub":      fmSub,
-		"JSON2Map": fmJSON2Map,
-		"ToJSON":   fmToJSON,
-		"Prefix":   fmPrefix,
-		"Suffix":   fmSuffix,
+		"HasPrefix": fmHasPrefix,
+		"Keys":      fmKeys,
+		"ToSlice":   fmToSlice,
+		"Sort":      fmSort,
+		"Equals":    fmEquals,
+		"Sub":       fmSub,
+		"JSON2Map":  fmJSON2Map,
+		"ToJSON":    fmToJSON,
+		"Prefix":    fmPrefix,
+		"Suffix":    fmSuffix,
 		// helper data structure
 		"NewHashSet": fmNewHashSet,
 	}
