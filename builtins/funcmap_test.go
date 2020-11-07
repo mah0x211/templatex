@@ -190,7 +190,7 @@ func Test_ToSlice(t *testing.T) {
 	}
 
 	// test that returns slice from arguments
-	for i, v := range ToSlice(args...) {
+	for i, v := range ToSlice(args...).Value() {
 		assert.Equal(t, args[i], v)
 	}
 }

@@ -55,8 +55,8 @@ func Keys(v interface{}) (*Slice, error) {
 	}
 }
 
-func ToSlice(v ...interface{}) []interface{} {
-	return v
+func ToSlice(v ...interface{}) *Slice {
+	return &Slice{v}
 }
 
 func Sort(arg []interface{}) []interface{} {
