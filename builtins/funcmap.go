@@ -26,6 +26,21 @@ func HasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
 
+func Join(v []interface{}, sep string) string {
+	var b strings.Builder
+	if n := len(v); n > 0 {
+		b.Grow(len(sep) * n)
+		tail := n - 1
+		for i := 0; i < tail; i++ {
+			fmt.Fprintf(&b, "%+v", v[i])
+			b.WriteString(sep)
+		}
+		fmt.Fprintf(&b, "%+v", v[tail])
+	}
+
+	return b.String()
+}
+
 func Keys(v interface{}) (*Slice, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
 	switch ref.Kind() {
@@ -299,6 +314,7 @@ func FuncMap() map[string]interface{} {
 		"Not":       Not,
 		"HasPrefix": HasPrefix,
 		"HasSuffix": HasSuffix,
+		"Join":      Join,
 		"Keys":      Keys,
 		"ToSlice":   ToSlice,
 		"Sort":      Sort,

@@ -32,6 +32,8 @@ func Test_FuncMap(t *testing.T) {
 			equalFunc(t, v, HasPrefix)
 		case "HasSuffix":
 			equalFunc(t, v, HasSuffix)
+		case "Join":
+			equalFunc(t, v, Join)
 		case "Keys":
 			equalFunc(t, v, Keys)
 		case "ToSlice":
@@ -122,6 +124,20 @@ func Test_HasSuffix(t *testing.T) {
 
 	// test that returns false
 	assert.False(t, HasSuffix("foo-bar", "foo"))
+}
+
+func Test_Join(t *testing.T) {
+	// test that returns a string joined
+	assert.Equal(t, "", Join(nil, ", "))
+	assert.Equal(t, "", Join([]interface{}{}, ", "))
+
+	// test that returns a string joined
+	assert.Equal(
+		t,
+		"1, <nil>, 13, a, 0.5, [hello world], map[hello:world], {foo:bar}",
+		Join([]interface{}{
+			1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"}, struct{ foo string }{"bar"}}, ", ",
+		))
 }
 
 func Test_Keys(t *testing.T) {
