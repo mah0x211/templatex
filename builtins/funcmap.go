@@ -86,6 +86,33 @@ func Sort(arg []interface{}) []interface{} {
 	return arg
 }
 
+func SortDesc(arg []interface{}) []interface{} {
+	sort.Slice(arg, func(i, j int) bool {
+		iv := reflect.ValueOf(arg[i])
+		jv := reflect.ValueOf(arg[j])
+		if !iv.IsValid() || !jv.IsValid() {
+			return iv.IsValid() == jv.IsValid()
+		} else if iv.Type() == jv.Type() {
+			switch iv.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return iv.Int() > jv.Int()
+
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return iv.Uint() > jv.Uint()
+
+			case reflect.Float32, reflect.Float64:
+				return iv.Float() > jv.Float()
+
+			case reflect.String:
+				return iv.String() > jv.String()
+			}
+		}
+		return false
+	})
+
+	return arg
+}
+
 func Equals(x interface{}, v ...interface{}) bool {
 	var xi interface{}
 	if ref := reflect.Indirect(reflect.ValueOf(x)); ref.IsValid() {
@@ -270,6 +297,7 @@ func FuncMap() map[string]interface{} {
 		"Keys":      Keys,
 		"ToSlice":   ToSlice,
 		"Sort":      Sort,
+		"SortDesc":  SortDesc,
 		"Equals":    Equals,
 		"Sub":       Sub,
 		"JSON2Map":  JSON2Map,

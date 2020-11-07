@@ -38,6 +38,8 @@ func Test_FuncMap(t *testing.T) {
 			equalFunc(t, v, ToSlice)
 		case "Sort":
 			equalFunc(t, v, Sort)
+		case "SortDesc":
+			equalFunc(t, v, SortDesc)
 		case "Equals":
 			equalFunc(t, v, Equals)
 		case "Sub":
@@ -235,6 +237,50 @@ func Test_Sort(t *testing.T) {
 	assert.Equal(t, []interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}, Sort([]interface{}{
+		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
+	}))
+}
+
+func Test_SortDesc(t *testing.T) {
+	// test that returns sorted slice with bool arguments
+	assert.Equal(t, []interface{}{
+		true, false, true, false, true, false,
+	}, SortDesc([]interface{}{
+		true, false, true, false, true, false,
+	}))
+
+	// test that returns sorted slice with integer arguments
+	assert.Equal(t, []interface{}{
+		32, 26, 18, 13, 9, 5, 1,
+	}, SortDesc([]interface{}{
+		1, 13, 5, 32, 9, 18, 26,
+	}))
+
+	// test that returns sorted slice with unsigned integer arguments
+	assert.Equal(t, []interface{}{
+		uint(32), uint(26), uint(18), uint(13), uint(9), uint(5), uint(1),
+	}, SortDesc([]interface{}{
+		uint(1), uint(13), uint(5), uint(32), uint(9), uint(18), uint(26),
+	}))
+
+	// test that returns sorted slice with float arguments
+	assert.Equal(t, []interface{}{
+		32.98, 26.43, 18.01, 13.91, 9.3, 5.0, 0.1,
+	}, SortDesc([]interface{}{
+		0.1, 13.91, 5.0, 32.98, 9.3, 18.01, 26.43,
+	}))
+
+	// test that returns sorted slice with string
+	assert.Equal(t, []interface{}{
+		"pineapple", "grape", "cherry", "banana", "apple",
+	}, SortDesc([]interface{}{
+		"grape", "pineapple", "banana", "apple", "cherry",
+	}))
+
+	// test that cannot sort slice with various types of values
+	assert.Equal(t, []interface{}{
+		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
+	}, SortDesc([]interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}))
 }
