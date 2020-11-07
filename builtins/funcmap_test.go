@@ -507,6 +507,16 @@ func Test_Slice(t *testing.T) {
 	// test that sort internal slice in descending order and returns self
 	assert.Equal(t, s, s.Clear().Append("foo", "bar", "baz").SortDesc())
 	assert.Equal(t, []interface{}{"foo", "baz", "bar"}, s.SortDesc().Value())
+
+	// test that join internal slice with sep argument
+	assert.Equal(t,
+		"1, <nil>, 13, a, 0.5, [hello world], map[hello:world], {foo:bar}",
+		s.Clear().Append(
+			1, nil, 13, "a", 0.5, []string{"hello", "world"},
+			map[string]string{"hello": "world"}, struct{ foo string }{"bar"},
+		).Join(", "),
+	)
+
 }
 
 func Test_HashSet(t *testing.T) {

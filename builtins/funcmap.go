@@ -282,6 +282,10 @@ func (s *Slice) SortDesc() *Slice {
 	return s
 }
 
+func (s *Slice) Join(sep string) string {
+	return Join(s.value, sep)
+}
+
 type HashSet struct {
 	data map[interface{}]bool
 }
