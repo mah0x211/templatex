@@ -170,8 +170,9 @@ func NewSlice(v ...interface{}) *Slice {
 	}
 }
 
-func (s *Slice) Clear() {
+func (s *Slice) Clear() *Slice {
 	s.value = nil
+	return s
 }
 
 func (s *Slice) Len() int {
@@ -196,12 +197,14 @@ func (s *Slice) Tail() interface{} {
 	return nil
 }
 
-func (s *Slice) Append(v ...interface{}) {
+func (s *Slice) Append(v ...interface{}) *Slice {
 	s.value = append(s.value, v...)
+	return s
 }
 
-func (s *Slice) Push(v interface{}) {
+func (s *Slice) Push(v interface{}) *Slice {
 	s.value = append(s.value, v)
+	return s
 }
 
 func (s *Slice) Pop() interface{} {
@@ -213,8 +216,9 @@ func (s *Slice) Pop() interface{} {
 	return nil
 }
 
-func (s *Slice) Unshift(v interface{}) {
+func (s *Slice) Unshift(v interface{}) *Slice {
 	s.value = append([]interface{}{v}, s.value...)
+	return s
 }
 
 func (s *Slice) Shift() interface{} {

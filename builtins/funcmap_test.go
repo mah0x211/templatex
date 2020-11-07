@@ -401,7 +401,7 @@ func Test_Slice(t *testing.T) {
 	assert.Equal(t, "baz", s.Tail())
 
 	// test that append values
-	s.Append("quu", "qux")
+	assert.Equal(t, s, s.Append("quu", "qux"))
 	assert.Equal(t, []interface{}{"foo", "bar", "baz", "quu", "qux"}, s.Value())
 
 	// test that clear value
@@ -413,7 +413,7 @@ func Test_Slice(t *testing.T) {
 
 	// test that push value
 	for i, v := range []string{"foo", "bar", "baz"} {
-		s.Push(v)
+		assert.Equal(t, s, s.Push(v))
 		// test that returns pushed value
 		assert.Equal(t, v, s.Tail())
 		assert.Equal(t, i+1, s.Len())
@@ -430,7 +430,7 @@ func Test_Slice(t *testing.T) {
 
 	// test that unshift value
 	for i, v := range []string{"quu", "qux", "quux"} {
-		s.Unshift(v)
+		assert.Equal(t, s, s.Unshift(v))
 		assert.Equal(t, v, s.Head())
 		assert.Equal(t, i+1, s.Len())
 	}
