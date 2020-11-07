@@ -230,6 +230,11 @@ func (s *Slice) Shift() interface{} {
 	return nil
 }
 
+func (s *Slice) Sort() *Slice {
+	Sort(s.value)
+	return s
+}
+
 type HashSet struct {
 	data map[interface{}]bool
 }
