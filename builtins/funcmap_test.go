@@ -487,6 +487,10 @@ func Test_Slice(t *testing.T) {
 	// test that sort internal slice and returns self
 	assert.Equal(t, s, s.Append("foo", "bar", "baz").Sort())
 	assert.Equal(t, []interface{}{"bar", "baz", "foo"}, s.Value())
+
+	// test that sort internal slice in descending order and returns self
+	assert.Equal(t, s, s.Clear().Append("foo", "bar", "baz").SortDesc())
+	assert.Equal(t, []interface{}{"foo", "baz", "bar"}, s.SortDesc().Value())
 }
 
 func Test_HashSet(t *testing.T) {

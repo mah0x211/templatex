@@ -262,6 +262,11 @@ func (s *Slice) Sort() *Slice {
 	return s
 }
 
+func (s *Slice) SortDesc() *Slice {
+	SortDesc(s.value)
+	return s
+}
+
 type HashSet struct {
 	data map[interface{}]bool
 }
