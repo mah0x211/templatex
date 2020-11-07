@@ -26,7 +26,7 @@ func HasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
 
-func Keys(v interface{}) ([]interface{}, error) {
+func Keys(v interface{}) (*Slice, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
 	switch ref.Kind() {
 	case reflect.Slice:
@@ -35,7 +35,7 @@ func Keys(v interface{}) ([]interface{}, error) {
 		for i := 0; i < n; i++ {
 			keys[i] = i
 		}
-		return keys, nil
+		return &Slice{keys}, nil
 
 	case reflect.Map:
 		n := ref.Len()
@@ -46,7 +46,7 @@ func Keys(v interface{}) ([]interface{}, error) {
 			keys[i] = iter.Key().Interface()
 			i++
 		}
-		return keys, nil
+		return &Slice{keys}, nil
 	}
 
 	return nil, &reflect.ValueError{

@@ -145,19 +145,14 @@ func Test_Keys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].(string) < res[j].(string)
-	})
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Sort().Value())
+
 	// with pointer
 	res, err = Keys(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].(string) < res[j].(string)
-	})
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Sort().Value())
 
 	// test that returns indexes of slice
 	sv := []string{"c", "e", "g", "a", "d", "f", "b"}
@@ -169,17 +164,17 @@ func Test_Keys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Value())
 	// with pointer
 	res, err = Keys(&sv)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Value())
 
 	// test that returns error if argument is not map or slice argument
-	keys, err = Keys(1)
-	assert.Nil(t, keys)
+	res, err = Keys(1)
+	assert.Nil(t, res)
 	assert.Error(t, err)
 }
 
