@@ -10,6 +10,7 @@ type xRenderer interface {
 	IsNil(tmpl interface{}) bool
 	NewTemplate(name string, funcs map[string]interface{}) interface{}
 	AddParseTree(dst, src interface{}) error
+	Lookup(tmpl interface{}, name string) (interface{}, bool)
 	ParseString(tmpl interface{}, str string) (interface{}, error)
 	Execute(tmpl interface{}, w io.Writer, data interface{}) error
 }
