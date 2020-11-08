@@ -5,6 +5,7 @@ import "sync"
 type File struct {
 	cache  Cache
 	name   string
+	root   interface{}
 	tmpl   interface{}
 	parent map[string]*File
 	child  map[string]*File
