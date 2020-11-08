@@ -55,33 +55,43 @@ func TestText_AddParseTree(t *testing.T) {
 	a := r.NewTemplate("foo", nil)
 	b := r.NewTemplate("bar", nil)
 	c := r.NewTemplate("baz", nil)
+	lookup := func(tmpl interface{}, name string) bool {
+		_, ok := r.Lookup(tmpl, name)
+		return ok
+	}
 
-	assert.Nil(t, c.(*template.Template).Lookup("baz_content"))
+	assert.False(t, lookup(c, "baz"))
+	assert.False(t, lookup(c, "baz_content"))
 	_, err := r.ParseString(c, `{{define "baz_content"}} baz {{end}}`)
 	assert.NoError(t, err)
-	assert.NotNil(t, c.(*template.Template).Lookup("baz_content"))
+	assert.True(t, lookup(c, "baz"))
+	assert.True(t, lookup(c, "baz_content"))
 
-	assert.Nil(t, b.(*template.Template).Lookup("bar_content"))
+	assert.False(t, lookup(b, "bar"))
+	assert.False(t, lookup(b, "bar_content"))
 	_, err = r.ParseString(b, `{{define "bar_content"}} bar {{end}}`)
 	assert.NoError(t, err)
-	assert.NotNil(t, b.(*template.Template).Lookup("bar_content"))
+	assert.True(t, lookup(b, "bar"))
+	assert.True(t, lookup(b, "bar_content"))
 
 	// test that add parse tree
-	assert.Nil(t, b.(*template.Template).Lookup("baz"))
-	assert.Nil(t, b.(*template.Template).Lookup("baz_content"))
+	assert.False(t, lookup(b, "baz"))
+	assert.False(t, lookup(b, "baz_content"))
 	assert.NoError(t, r.AddParseTree(b, c))
-	assert.NotNil(t, b.(*template.Template).Lookup("baz"))
-	assert.NotNil(t, b.(*template.Template).Lookup("baz_content"))
+	assert.True(t, lookup(b, "baz"))
+	assert.True(t, lookup(b, "baz_content"))
 
-	assert.Nil(t, a.(*template.Template).Lookup("bar"))
-	assert.Nil(t, a.(*template.Template).Lookup("bar_content"))
-	assert.Nil(t, a.(*template.Template).Lookup("baz"))
-	assert.Nil(t, a.(*template.Template).Lookup("baz_content"))
+	assert.False(t, lookup(a, "foo"))
+	assert.False(t, lookup(a, "bar"))
+	assert.False(t, lookup(a, "bar_content"))
+	assert.False(t, lookup(a, "baz"))
+	assert.False(t, lookup(a, "baz_content"))
 	assert.NoError(t, r.AddParseTree(a, b))
-	assert.NotNil(t, a.(*template.Template).Lookup("bar"))
-	assert.NotNil(t, a.(*template.Template).Lookup("bar_content"))
-	assert.NotNil(t, a.(*template.Template).Lookup("baz"))
-	assert.NotNil(t, a.(*template.Template).Lookup("baz_content"))
+	assert.False(t, lookup(a, "foo"))
+	assert.True(t, lookup(a, "bar"))
+	assert.True(t, lookup(a, "bar_content"))
+	assert.True(t, lookup(a, "baz"))
+	assert.True(t, lookup(a, "baz_content"))
 }
 
 func TestText_ParseString(t *testing.T) {

@@ -26,7 +26,22 @@ func HasSuffix(s, suffix string) bool {
 	return strings.HasSuffix(s, suffix)
 }
 
-func Keys(v interface{}) ([]interface{}, error) {
+func Join(v []interface{}, sep string) string {
+	var b strings.Builder
+	if n := len(v); n > 0 {
+		b.Grow(len(sep) * n)
+		tail := n - 1
+		for i := 0; i < tail; i++ {
+			fmt.Fprintf(&b, "%+v", v[i])
+			b.WriteString(sep)
+		}
+		fmt.Fprintf(&b, "%+v", v[tail])
+	}
+
+	return b.String()
+}
+
+func Keys(v interface{}) (*Slice, error) {
 	ref := reflect.Indirect(reflect.ValueOf(v))
 	switch ref.Kind() {
 	case reflect.Slice:
@@ -35,7 +50,7 @@ func Keys(v interface{}) ([]interface{}, error) {
 		for i := 0; i < n; i++ {
 			keys[i] = i
 		}
-		return keys, nil
+		return &Slice{keys}, nil
 
 	case reflect.Map:
 		n := ref.Len()
@@ -46,7 +61,7 @@ func Keys(v interface{}) ([]interface{}, error) {
 			keys[i] = iter.Key().Interface()
 			i++
 		}
-		return keys, nil
+		return &Slice{keys}, nil
 	}
 
 	return nil, &reflect.ValueError{
@@ -55,8 +70,8 @@ func Keys(v interface{}) ([]interface{}, error) {
 	}
 }
 
-func ToSlice(v ...interface{}) []interface{} {
-	return v
+func ToSlice(v ...interface{}) *Slice {
+	return &Slice{v}
 }
 
 func Sort(arg []interface{}) []interface{} {
@@ -78,6 +93,33 @@ func Sort(arg []interface{}) []interface{} {
 
 			case reflect.String:
 				return iv.String() < jv.String()
+			}
+		}
+		return false
+	})
+
+	return arg
+}
+
+func SortDesc(arg []interface{}) []interface{} {
+	sort.Slice(arg, func(i, j int) bool {
+		iv := reflect.ValueOf(arg[i])
+		jv := reflect.ValueOf(arg[j])
+		if !iv.IsValid() || !jv.IsValid() {
+			return iv.IsValid() == jv.IsValid()
+		} else if iv.Type() == jv.Type() {
+			switch iv.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				return iv.Int() > jv.Int()
+
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				return iv.Uint() > jv.Uint()
+
+			case reflect.Float32, reflect.Float64:
+				return iv.Float() > jv.Float()
+
+			case reflect.String:
+				return iv.String() > jv.String()
 			}
 		}
 		return false
@@ -170,8 +212,9 @@ func NewSlice(v ...interface{}) *Slice {
 	}
 }
 
-func (s *Slice) Clear() {
+func (s *Slice) Clear() *Slice {
 	s.value = nil
+	return s
 }
 
 func (s *Slice) Len() int {
@@ -196,12 +239,14 @@ func (s *Slice) Tail() interface{} {
 	return nil
 }
 
-func (s *Slice) Append(v ...interface{}) {
+func (s *Slice) Append(v ...interface{}) *Slice {
 	s.value = append(s.value, v...)
+	return s
 }
 
-func (s *Slice) Push(v interface{}) {
+func (s *Slice) Push(v interface{}) *Slice {
 	s.value = append(s.value, v)
+	return s
 }
 
 func (s *Slice) Pop() interface{} {
@@ -213,8 +258,9 @@ func (s *Slice) Pop() interface{} {
 	return nil
 }
 
-func (s *Slice) Unshift(v interface{}) {
+func (s *Slice) Unshift(v interface{}) *Slice {
 	s.value = append([]interface{}{v}, s.value...)
+	return s
 }
 
 func (s *Slice) Shift() interface{} {
@@ -224,6 +270,20 @@ func (s *Slice) Shift() interface{} {
 		return v
 	}
 	return nil
+}
+
+func (s *Slice) Sort() *Slice {
+	Sort(s.value)
+	return s
+}
+
+func (s *Slice) SortDesc() *Slice {
+	SortDesc(s.value)
+	return s
+}
+
+func (s *Slice) Join(sep string) string {
+	return Join(s.value, sep)
 }
 
 type HashSet struct {
@@ -258,9 +318,11 @@ func FuncMap() map[string]interface{} {
 		"Not":       Not,
 		"HasPrefix": HasPrefix,
 		"HasSuffix": HasSuffix,
+		"Join":      Join,
 		"Keys":      Keys,
 		"ToSlice":   ToSlice,
 		"Sort":      Sort,
+		"SortDesc":  SortDesc,
 		"Equals":    Equals,
 		"Sub":       Sub,
 		"JSON2Map":  JSON2Map,

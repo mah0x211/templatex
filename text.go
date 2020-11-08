@@ -45,6 +45,11 @@ func (_ Text) AddParseTree(dst, src interface{}) error {
 	return nil
 }
 
+func (_ Text) Lookup(tmpl interface{}, name string) (interface{}, bool) {
+	t := tmpl.(*template.Template).Lookup(name)
+	return t, t != nil
+}
+
 func (_ Text) ParseString(tmpl interface{}, str string) (interface{}, error) {
 	return tmpl.(*template.Template).Parse(str)
 }

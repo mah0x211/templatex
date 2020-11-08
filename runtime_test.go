@@ -117,7 +117,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"SubMessage": "sub template!",
 	})
 	assert.NoError(t, err)
-	assert.Regexp(t, `\s*hello world\s+with sub template!\s*with sub template!\s*is included twice`, string(b.Bytes()))
+	assert.Regexp(t, `\s*hello world\s+with sub template!\s*with sub template!\s*is included twice`, b.String())
 
 	// test that render with nested sub templates
 	b.Reset()
@@ -143,7 +143,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"SubMessage": "sub template!",
 	})
 	assert.NoError(t, err)
-	assert.Regexp(t, `\s*hello world\s+with sub template!\s+with sub template!\s*`, string(b.Bytes()))
+	assert.Regexp(t, `\s*hello world\s+with sub template!\s+with sub template!\s*`, b.String())
 
 	// that returns error if the template is included recursively
 	b.Reset()
@@ -203,7 +203,7 @@ func TestRuntime_RenderHTML(t *testing.T) {
 		"SubMessage": "sub template!",
 	})
 	assert.NoError(t, err)
-	assert.Regexp(t, `layout\s+[-]+\s+hello world\s+with sub template!\s+[-]+\s+`, string(b.Bytes()))
+	assert.Regexp(t, `layout\s+[-]+\s+hello world\s+with sub template!\s+[-]+\s+`, b.String())
 
 	// test that can specify only one layout template
 	b.Reset()
@@ -294,6 +294,63 @@ func TestRuntime_RenderText(t *testing.T) {
 	files := map[string]string{
 		"/root/dir/with_include.html": `hello {{.World}} {{template "@include.html" .}}`,
 		"/root/dir/@include.html":     `{{define "@include.html"}}with {{.SubMessage}}{{end}}`,
+
+		// error in @err_include.html:
+		"/root/dir/@err_include.html": `
+			{{define "@err_include.html"}}
+			with {{UnknownFunc .}}
+			{{end}}
+		`,
+		"/root/dir/with_err_include.html": `
+			hello {{.World}}
+			{{template "@err_include.html" .}}
+		`,
+
+		"/root/dir/@err_layout.html": `
+			head|
+			{{UnknownFunc .}}
+			|tail
+		`,
+		"/root/dir/with_err_layout.html": `
+			{{define "content"}}
+			{{layout "@err_layout.html"}}
+				hello
+			{{end}}
+		`,
+
+		"/root/dir/@layout.html": `
+			head|
+			{{template "content" .}}
+			|tail
+		`,
+		"/root/dir/with_err_in_content_in_layout.html": `
+			{{layout "@layout.html"}}
+			{{define "content"}}
+			hello
+			{{UnknownFunc .}}
+			{{end}}
+		`,
+
+		"/root/dir/with_err_include_in_content_in_layout.html": `
+			{{layout "@layout.html"}}
+			{{define "content"}}
+			hello
+			{{template "@err_include.html" .}}
+			{{end}}
+		`,
+
+		"/root/dir/@layout_with_err_include.html": `
+			head|
+			{{template "content" .}}
+			{{template "@err_include.html" .}}
+			|tail
+		`,
+		"/root/dir/with_err_include_in_layout.html": `
+			{{layout "@layout_with_err_include.html"}}
+			{{define "content"}}
+			hello
+			{{end}}
+		`,
 	}
 	nread := 0
 	readfn := func(pathname string) ([]byte, error) {
@@ -339,5 +396,54 @@ func TestRuntime_RenderText(t *testing.T) {
 	}))
 	assert.Equal(t, []byte("hello <world!> with sub template!"), b.Bytes())
 	assert.Equal(t, 4, nread)
+
+	// test that returns error with err_include error
+	b.Reset()
+	err := rt.RenderText(b, "with_err_include.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `in "with_err_include.html"`)
+	assert.Contains(t, err.Error(), `@err_include.html:3: function "UnknownFunc" not defined`)
+
+	// test that returns error with err_layout error
+	b.Reset()
+	err = rt.RenderText(b, "with_err_layout.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `in "with_err_layout.html"`)
+	assert.Contains(t, err.Error(), `@err_layout.html:3: function "UnknownFunc" not defined`)
+
+	// test that returns error with err_layout error
+	b.Reset()
+	err = rt.RenderText(b, "with_err_in_content_in_layout.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `with_err_in_content_in_layout.html:5: function "UnknownFunc" not defined`)
+
+	// test that returns error with err_layout error
+	b.Reset()
+	err = rt.RenderText(b, "with_err_include_in_content_in_layout.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `in "with_err_include_in_content_in_layout.html"`)
+	assert.Contains(t, err.Error(), `@err_include.html:3: function "UnknownFunc" not defined`)
+
+	// test that returns error with err_layout error
+	b.Reset()
+	err = rt.RenderText(b, "with_err_include_in_layout.html", map[string]interface{}{
+		"World":      "<world!>",
+		"SubMessage": "sub template!",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), `in "with_err_include_in_layout.html"`)
+	assert.Contains(t, err.Error(), `@err_include.html:3: function "UnknownFunc" not defined`)
 
 }

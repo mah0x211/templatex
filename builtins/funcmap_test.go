@@ -32,12 +32,16 @@ func Test_FuncMap(t *testing.T) {
 			equalFunc(t, v, HasPrefix)
 		case "HasSuffix":
 			equalFunc(t, v, HasSuffix)
+		case "Join":
+			equalFunc(t, v, Join)
 		case "Keys":
 			equalFunc(t, v, Keys)
 		case "ToSlice":
 			equalFunc(t, v, ToSlice)
 		case "Sort":
 			equalFunc(t, v, Sort)
+		case "SortDesc":
+			equalFunc(t, v, SortDesc)
 		case "Equals":
 			equalFunc(t, v, Equals)
 		case "Sub":
@@ -122,6 +126,20 @@ func Test_HasSuffix(t *testing.T) {
 	assert.False(t, HasSuffix("foo-bar", "foo"))
 }
 
+func Test_Join(t *testing.T) {
+	// test that returns a string joined
+	assert.Equal(t, "", Join(nil, ", "))
+	assert.Equal(t, "", Join([]interface{}{}, ", "))
+
+	// test that returns a string joined
+	assert.Equal(
+		t,
+		"1, <nil>, 13, a, 0.5, [hello world], map[hello:world], {foo:bar}",
+		Join([]interface{}{
+			1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"}, struct{ foo string }{"bar"}}, ", ",
+		))
+}
+
 func Test_Keys(t *testing.T) {
 	// test that returns keys of map
 	v := map[interface{}]bool{
@@ -145,19 +163,14 @@ func Test_Keys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].(string) < res[j].(string)
-	})
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Sort().Value())
+
 	// with pointer
 	res, err = Keys(&v)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i].(string) < res[j].(string)
-	})
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Sort().Value())
 
 	// test that returns indexes of slice
 	sv := []string{"c", "e", "g", "a", "d", "f", "b"}
@@ -169,17 +182,17 @@ func Test_Keys(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Value())
 	// with pointer
 	res, err = Keys(&sv)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, keys, res)
+	assert.Equal(t, keys, res.Value())
 
 	// test that returns error if argument is not map or slice argument
-	keys, err = Keys(1)
-	assert.Nil(t, keys)
+	res, err = Keys(1)
+	assert.Nil(t, res)
 	assert.Error(t, err)
 }
 
@@ -195,7 +208,7 @@ func Test_ToSlice(t *testing.T) {
 	}
 
 	// test that returns slice from arguments
-	for i, v := range ToSlice(args...) {
+	for i, v := range ToSlice(args...).Value() {
 		assert.Equal(t, args[i], v)
 	}
 }
@@ -240,6 +253,50 @@ func Test_Sort(t *testing.T) {
 	assert.Equal(t, []interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}, Sort([]interface{}{
+		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
+	}))
+}
+
+func Test_SortDesc(t *testing.T) {
+	// test that returns sorted slice with bool arguments
+	assert.Equal(t, []interface{}{
+		true, false, true, false, true, false,
+	}, SortDesc([]interface{}{
+		true, false, true, false, true, false,
+	}))
+
+	// test that returns sorted slice with integer arguments
+	assert.Equal(t, []interface{}{
+		32, 26, 18, 13, 9, 5, 1,
+	}, SortDesc([]interface{}{
+		1, 13, 5, 32, 9, 18, 26,
+	}))
+
+	// test that returns sorted slice with unsigned integer arguments
+	assert.Equal(t, []interface{}{
+		uint(32), uint(26), uint(18), uint(13), uint(9), uint(5), uint(1),
+	}, SortDesc([]interface{}{
+		uint(1), uint(13), uint(5), uint(32), uint(9), uint(18), uint(26),
+	}))
+
+	// test that returns sorted slice with float arguments
+	assert.Equal(t, []interface{}{
+		32.98, 26.43, 18.01, 13.91, 9.3, 5.0, 0.1,
+	}, SortDesc([]interface{}{
+		0.1, 13.91, 5.0, 32.98, 9.3, 18.01, 26.43,
+	}))
+
+	// test that returns sorted slice with string
+	assert.Equal(t, []interface{}{
+		"pineapple", "grape", "cherry", "banana", "apple",
+	}, SortDesc([]interface{}{
+		"grape", "pineapple", "banana", "apple", "cherry",
+	}))
+
+	// test that cannot sort slice with various types of values
+	assert.Equal(t, []interface{}{
+		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
+	}, SortDesc([]interface{}{
 		1, nil, 13, "a", 0.5, []string{"hello", "world"}, map[string]string{"hello": "world"},
 	}))
 }
@@ -401,7 +458,7 @@ func Test_Slice(t *testing.T) {
 	assert.Equal(t, "baz", s.Tail())
 
 	// test that append values
-	s.Append("quu", "qux")
+	assert.Equal(t, s, s.Append("quu", "qux"))
 	assert.Equal(t, []interface{}{"foo", "bar", "baz", "quu", "qux"}, s.Value())
 
 	// test that clear value
@@ -413,7 +470,7 @@ func Test_Slice(t *testing.T) {
 
 	// test that push value
 	for i, v := range []string{"foo", "bar", "baz"} {
-		s.Push(v)
+		assert.Equal(t, s, s.Push(v))
 		// test that returns pushed value
 		assert.Equal(t, v, s.Tail())
 		assert.Equal(t, i+1, s.Len())
@@ -430,7 +487,7 @@ func Test_Slice(t *testing.T) {
 
 	// test that unshift value
 	for i, v := range []string{"quu", "qux", "quux"} {
-		s.Unshift(v)
+		assert.Equal(t, s, s.Unshift(v))
 		assert.Equal(t, v, s.Head())
 		assert.Equal(t, i+1, s.Len())
 	}
@@ -442,6 +499,24 @@ func Test_Slice(t *testing.T) {
 		assert.Equal(t, n-(i+1), s.Len())
 	}
 	assert.Nil(t, s.Shift())
+
+	// test that sort internal slice and returns self
+	assert.Equal(t, s, s.Append("foo", "bar", "baz").Sort())
+	assert.Equal(t, []interface{}{"bar", "baz", "foo"}, s.Value())
+
+	// test that sort internal slice in descending order and returns self
+	assert.Equal(t, s, s.Clear().Append("foo", "bar", "baz").SortDesc())
+	assert.Equal(t, []interface{}{"foo", "baz", "bar"}, s.SortDesc().Value())
+
+	// test that join internal slice with sep argument
+	assert.Equal(t,
+		"1, <nil>, 13, a, 0.5, [hello world], map[hello:world], {foo:bar}",
+		s.Clear().Append(
+			1, nil, 13, "a", 0.5, []string{"hello", "world"},
+			map[string]string{"hello": "world"}, struct{ foo string }{"bar"},
+		).Join(", "),
+	)
+
 }
 
 func Test_HashSet(t *testing.T) {
